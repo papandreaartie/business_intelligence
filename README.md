@@ -1,0 +1,1 @@
+# ISA 401: Business Intelligence & Data Visualization, Artie Papandrea, Semester: Fall 2026, Phase I: Data Acquisition & Transformation, Phase II: Data Visualization & Communication, Phase III: Exploratory Data Mining
