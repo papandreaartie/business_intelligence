@@ -1599,9 +1599,28 @@ border-radius: 0px;
 <pre class="r"><code>crashes_per_day = 30125 / 365
 crashes_per_day</code></pre>
 <pre><code>## [1] 82.53425</code></pre>
+<pre class="r"><code>crashes_by_day = c(2020, 2241, 2327, 2285,
+                   2380, 1866, 1664)
+names(crashes_by_day) = c(&quot;Mon&quot;, &quot;Tue&quot;, &quot;Wed&quot;, &quot;Thu&quot;,
+                          &quot;Fri&quot;, &quot;Sat&quot;, &quot;Sun&quot;)
+crashes_by_day</code></pre>
+<pre><code>##  Mon  Tue  Wed  Thu  Fri  Sat  Sun 
+## 2020 2241 2327 2285 2380 1866 1664</code></pre>
+<div id="type-of-crashes_by_day" class="section level2" number="1.1">
+<h2><span class="header-section-number">1.1</span> Type of
+‘crashes_by_day’</h2>
+<pre class="r"><code>typeof(crashes_by_day)</code></pre>
+<pre><code>## [1] &quot;double&quot;</code></pre>
+<pre class="r"><code>crashes_by_day_int = c(2020L, 2241L, 2327L, 2285L,
+                   2380L, 1866L, 1664L)
+names(crashes_by_day_int) = c(&quot;Mon&quot;, &quot;Tue&quot;, &quot;Wed&quot;, &quot;Thu&quot;,
+                          &quot;Fri&quot;, &quot;Sat&quot;, &quot;Sun&quot;)
+crashes_by_day_int |&gt; typeof()</code></pre>
+<pre><code>## [1] &quot;integer&quot;</code></pre>
+</div>
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIjAzIC0gUiBCYXNpY3MiDQphdXRob3I6ICJBcnRpZSBQYXBhbmRyZWEiDQpkYXRlOiAiMjAyNi0wOC0zMSINCm91dHB1dDogDQogIGh0bWxfZG9jdW1lbnQ6DQogICAgdG9jOiBUUlVFDQogICAgdG9jX2Zsb2F0OiBUUlVFDQogICAgbnVtYmVyX3NlY3Rpb25zOiBUUlVFDQogICAgY29kZV9mb2xkaW5nOiBzaG93DQogICAgY29kZV9kb3dubG9hZDogVFJVRQ0KLS0tDQoNCmBgYHtyIHNldHVwLCBpbmNsdWRlPUZBTFNFfQ0Ka25pdHI6Om9wdHNfY2h1bmskc2V0KGVjaG8gPSBUUlVFKQ0KYGBgDQoNCiMgQ3Jhc2hlcyBQZXIgRGF5DQpgYGB7ciBjaW5jeV9jcmFzaGVzfQ0KY3Jhc2hlc19wZXJfZGF5ID0gMzAxMjUgLyAzNjUNCmNyYXNoZXNfcGVyX2RheQ0KYGBgDQo=</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIjAzIC0gUiBCYXNpY3MiDQphdXRob3I6ICJBcnRpZSBQYXBhbmRyZWEiDQpkYXRlOiAiMjAyNi0wOC0zMSINCm91dHB1dDogDQogIGh0bWxfZG9jdW1lbnQ6DQogICAgdG9jOiBUUlVFDQogICAgdG9jX2Zsb2F0OiBUUlVFDQogICAgbnVtYmVyX3NlY3Rpb25zOiBUUlVFDQogICAgY29kZV9mb2xkaW5nOiBzaG93DQogICAgY29kZV9kb3dubG9hZDogVFJVRQ0KLS0tDQoNCmBgYHtyIHNldHVwLCBpbmNsdWRlPUZBTFNFfQ0Ka25pdHI6Om9wdHNfY2h1bmskc2V0KGVjaG8gPSBUUlVFKQ0KYGBgDQoNCiMgQ3Jhc2hlcyBQZXIgRGF5DQpgYGB7ciBjaW5jeV9jcmFzaGVzfQ0KY3Jhc2hlc19wZXJfZGF5ID0gMzAxMjUgLyAzNjUNCmNyYXNoZXNfcGVyX2RheQ0KDQpjcmFzaGVzX2J5X2RheSA9IGMoMjAyMCwgMjI0MSwgMjMyNywgMjI4NSwNCiAgICAgICAgICAgICAgICAgICAyMzgwLCAxODY2LCAxNjY0KQ0KbmFtZXMoY3Jhc2hlc19ieV9kYXkpID0gYygiTW9uIiwgIlR1ZSIsICJXZWQiLCAiVGh1IiwNCiAgICAgICAgICAgICAgICAgICAgICAgICAgIkZyaSIsICJTYXQiLCAiU3VuIikNCmNyYXNoZXNfYnlfZGF5DQpgYGANCg0KIyMgVHlwZSBvZiAnY3Jhc2hlc19ieV9kYXknDQpgYGB7cn0NCnR5cGVvZihjcmFzaGVzX2J5X2RheSkNCg0KY3Jhc2hlc19ieV9kYXlfaW50ID0gYygyMDIwTCwgMjI0MUwsIDIzMjdMLCAyMjg1TCwNCiAgICAgICAgICAgICAgICAgICAyMzgwTCwgMTg2NkwsIDE2NjRMKQ0KbmFtZXMoY3Jhc2hlc19ieV9kYXlfaW50KSA9IGMoIk1vbiIsICJUdWUiLCAiV2VkIiwgIlRodSIsDQogICAgICAgICAgICAgICAgICAgICAgICAgICJGcmkiLCAiU2F0IiwgIlN1biIpDQpjcmFzaGVzX2J5X2RheV9pbnQgfD4gdHlwZW9mKCkNCmBgYA0KDQoNCg==</div>
 
 
 </div>
