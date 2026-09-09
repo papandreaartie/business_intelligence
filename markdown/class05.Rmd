@@ -1,0 +1,96 @@
+---
+title: "Class 05"
+author: "Artie Papandrea"
+date: "2026-09-09"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: TRUE
+    code_folding: show
+    code_download: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Game 01: Find your seat
+```{r game 01}
+campus = jsonlite::fromJSON(
+  "https://isa401-find-your-seat.vercel.app/campus.json")
+dplyr::glimpse(campus)
+```
+
+
+```{r}
+fsb = campus[['Farmer']] # campus$Farmer; or campus[[5]]
+fsb$code
+```
+
+
+```{r}
+
+```
+
+```{r}
+# Answers
+campus[["Farmer"]]$code                      # "MUFSB"
+campus$Farmer$floors[["2"]]$sections        # 80
+r = campus$Farmer$floors[["2"]]$rooms
+r$isa_sections[r$room == "2050"]             # 11
+```
+```{r}
+sec_floor = fsb[["floors"]][["2"]] # fsb$floors[["2]]
+sec_floor$sections
+# equivalent
+fsb$floors[[3]]$sections
+
+df = sec_floor$rooms
+df
+```
+
+
+
+
+## Reading the Excel File
+```{r read_excel}
+occupation = readxl::read_excel(
+  path = "../data/occupation.xlsx", sheet = "Table 1.4", skip = 1
+  )
+
+# optional: clean the bottom 3 rows
+occupation = occupation[-c(32,33,34), ] # delete 3 specific rows, keep all cols (since after the , is empty --> 1:7)
+```
+
+
+## JSON Data
+```{r json_data}
+json_url = paste0(
+  "https://data.cincinnati-oh.gov/",
+  "resource/rvmt-pkmq.json?$limit=100"
+  )
+crashes_json = jsonlite::fromJSON(json_url)
+dplyr::glimpse(
+  crashes_json[, c("crashdate", "dayofweek",
+                   "crashseverity", "age")])
+```
+```{r}
+logins = readr::read_csv("https://isa401-import-heist.vercel.app/api/stage1?seat=R2-5&s=A")
+```
+```{r}
+log = jsonlite::fromJSON("https://isa401-import-heist.vercel.app/api/stage2?key=smithj31&seat=R2-5&s=A")
+
+log[["events"]][["action"]]
+# 6 events are downloads
+sum(log$events$action == "DOWNLOAD")
+
+```
+
+
+
+```{r}
+jsonlite::fromJSON("https://isa401-import-heist.vercel.app/api/finish?code=6&seat=R2-5&s=A")
+```
+
