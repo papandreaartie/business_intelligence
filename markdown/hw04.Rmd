@@ -1,0 +1,56 @@
+---
+title: "hw04"
+output: html_document
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    number_sections: TRUE
+    code_folding: show
+    code_download: TRUE
+date: "2026-09-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+DBI::dbReadTable(con, "listings")
+```
+
+```{r}
+con = DBI::dbConnect(RSQLite::SQLite(), "../data/midwest_airbnb.db")
+listings = DBI::dbReadTable(con, "listings")
+```
+
+```{r}
+dplyr:: glimpse(listings)
+```
+```{r}
+# how many of the listings are in Columbus?
+Columbus <- listings[listings$city == "Columbus", ]
+```
+
+```{r}
+
+```
+
+
+```{r}
+# what is the most expensive listing in Chicago
+Chicago <- listings[listings$city == "Chicago", ]
+Chicago[which.max(Chicago$price), ]
+```
+```{r}
+# how many distinct values in the neighbourhood column among the chicago listings
+length(unique(Chicago$neighbourhood))
+```
+```{r}
+# how many listings are run by a superhost
+sum(listings$host_is_superhost == 't', na.rm = TRUE)
+```
+```{r}
+# how many listings cost more than $1000
+sum(listings$price > 1000, na.rm = TRUE)
+```
+
