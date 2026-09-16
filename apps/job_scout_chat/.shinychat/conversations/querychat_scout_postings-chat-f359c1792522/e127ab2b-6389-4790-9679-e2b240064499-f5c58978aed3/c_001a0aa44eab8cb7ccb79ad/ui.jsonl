@@ -1,0 +1,2 @@
+{"node_id":"n_0001","data":[{"version":1,"role":"user","segments":[{"content":"hello","content_type":"markdown"}]}]}
+{"node_id":"n_0002","data":[{"version":1,"role":"assistant","segments":[{"content":"Hello! I can help you explore the scout postings data.\n\n<ul>\n<li><span class=\"suggestion\">Show me the available columns and data fields<\/span><\/li>\n<li><span class=\"suggestion\">How many scout postings are there?<\/span><\/li>\n<li><span class=\"suggestion\">Show me the latest scout postings<\/span><\/li>\n<\/ul>","content_type":"markdown"}]}]}
