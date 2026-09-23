@@ -42,6 +42,9 @@ httr2::request("https://api.stlouisfed.org/fred/series/observations") |>
 
 ```
 
+```{r}
+###
+```
 
 
 
