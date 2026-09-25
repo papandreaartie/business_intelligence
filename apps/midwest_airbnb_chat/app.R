@@ -12,7 +12,9 @@ qc = querychat(
   con, "listings",
   client   = client,
   tools    = c("filter", "query", "visualize"),  # visualize: charts in the chat (needs ggsql)
-  greeting = "Ask me about 14,887 Airbnb listings in Chicago, Columbus, and the Twin Cities."
+  greeting = "Ask me about 14,887 Airbnb listings in Chicago, Columbus, and the Twin Cities.",
+  data_description   = "data/data_desc.md",
+  extra_instructions = "data/extra_instructions.md"
 )
 
 qc$app_obj()
