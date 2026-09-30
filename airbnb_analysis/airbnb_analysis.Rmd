@@ -1,0 +1,57 @@
+---
+title: "Airbnb Analysis"
+date: "2026-09-28"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    number_sections: TRUE
+    code_folding: show
+    code_download: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+con = DBI::dbConnect(RSQLite::SQLite(), "../data/midwest_airbnb_extended.db")
+listings     = DBI::dbReadTable(con, "listings") |> tibble::as_tibble()
+availability = DBI::dbReadTable(con, "availability_monthly") |> tibble::as_tibble()
+reviews      = DBI::dbReadTable(con, "reviews_monthly") |> tibble::as_tibble()
+DBI::dbDisconnect(con)
+```
+
+```{r}
+dplyr::glimpse(listings)
+```
+
+## Task 1
+```{r}
+# count listings per host_id and join to listings
+host_counts = listings |> 
+  dplyr::count(host_id, name = "listing_count")
+
+listings = listings |> 
+  dplyr::left_join(host_counts, by = "host_id")
+
+# report how many hosts have more than 10 listings and what percent of chicagos listings these hosts hold
+listings |> 
+  dplyr::filter(listing_count >= 10) |> 
+  dplyr::summarise(
+    hosts_10_plus = dplyr::n_distinct(host_id),
+    chicago_percent = sum(city == "Chicago") /
+                      sum(listings$city == "Chicago") * 100
+  )
+
+```
+
+## Task 2
+```{r}
+
+```
+
+
+
+
+
