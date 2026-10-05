@@ -107,14 +107,22 @@ head(courses_df_from_purrr)
 We will use `purrr` based on a class vote.
 
 ```{r}
-year = 2026
-#always check the url code in browser before proceeding
-plane_url = paste0("https://www.planecrashinfo.com/", year, "/", ".htm") 
+year = 2025
 
-webpage = rvest::read_html(plane_url)
-#webpage |> rvest::html_element("center > table") |> rvest::html_table()
+crash_url = paste0('https://www.planecrashinfo.com/', year, '/', year, '.htm')
+
+crash_page <- rvest::read_html(crash_url, encoding = "ISO-8859-1")
+
+# This should now print without the error
+crash_page
 ```
 
+```{r}
+# How many <table> elements are on the page?
+crash_tables <- crash_page |>
+  rvest::html_elements("table") |>
+  rvest::html_table()
+```
 
 
 

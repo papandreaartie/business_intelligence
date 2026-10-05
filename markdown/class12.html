@@ -11,9 +11,9 @@
 
 <meta name="author" content="Artie Papandrea" />
 
-<meta name="date" content="2026-09-30" />
+<meta name="date" content="2026-10-05" />
 
-<title>Class 11</title>
+<title>Class 12</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -1587,121 +1587,16 @@ border-radius: 0px;
 
 
 
-<h1 class="title toc-ignore">Class 11</h1>
+<h1 class="title toc-ignore">Class 12</h1>
 <h4 class="author">Artie Papandrea</h4>
-<h4 class="date">2026-09-30</h4>
+<h4 class="date">2026-10-05</h4>
 
 </div>
 
 
-<div id="learning-objectives-for-today" class="section level2" number="1">
-<h2><span class="header-section-number">1</span> Learning objectives for
-Today</h2>
-<ul>
-<li><p>Scrape multiple webpages using <code>for</code> loops;</p></li>
-<li><p>Scrape multiple webpages using the <code>purrr::map()</code> type
-functions, which would also make you write your own functions in
-R.</p></li>
-</ul>
-</div>
-<div id="extending-the-course-bulletin-scrape-for-multiple-departments" class="section level2" number="2">
-<h2><span class="header-section-number">2</span> Extending the Course
-Bulletin Scrape for multiple departments</h2>
-<p>For the sake of the example, let us scrape the following pages: <a href="https://bulletin.miamioh.edu/courses-instruction/isa/">ISA</a> and
-<a href="https://bulletin.miamioh.edu/courses-instruction/mkt/">MKT</a>.
-From the logic shown in class, you can essentially do that for all fsb
-departments.</p>
-<p>Note that if you are doing it for just a few departments, you can
-just repeat your code a few times; however, this is bad practice as so
-we will not do this in class. Software engineers tend to refer to this
-as : <strong>DRY</strong> (don’t repeat yourself)</p>
-<pre class="r"><code>dept_abbr = c(&#39;acc&#39;, &#39;bus&#39;, &#39;isa&#39;, &#39;mkt&#39;) # extending the example to 4 depts
-# line below illustrates how the url can be constructed by pasting) (i.e., no space) the base_url, dept_abbreviation and the forward slash
-
-
-
-courses_df = data.frame() # initialize the container
-for (dept_name in dept_abbr) {
-  cat(rep(&quot;-&quot;, 25))
-  print(dept_name)
-  dept_url = paste0(&quot;https://bulletin.miamioh.edu/courses-instruction/&quot;, dept_name, &quot;/&quot;)
-  
-  # for the titles, I will use the selector gadget and for the desc, I will use the inspector (to show you the alternative CSS selectors for what we did on Mon)
-  webpage = rvest::read_html(dept_url)
-  
-  webpage |&gt; rvest::html_elements(&quot;strong&quot;) |&gt; rvest::html_text2() -&gt; titles
-  webpage |&gt; 
-    rvest::html_elements(&quot;#sc_sccoursedescs &gt; div &gt; p.courseblockdesc&quot;) |&gt; 
-    rvest::html_text2() -&gt; descs
-  
-  df = data.frame(title = titles, desc = descs)
-  df$title[1] |&gt; print() # showing only the first course title
-  
-  courses_df = rbind(courses_df, df)
-  cat(rep(&quot;-&quot;, 25))
-}</code></pre>
-<pre><code>## - - - - - - - - - - - - - - - - - - - - - - - - -[1] &quot;acc&quot;
-## [1] &quot;ACC 177. Independent Studies. (0-6; maximum 10)&quot;
-## - - - - - - - - - - - - - - - - - - - - - - - - -- - - - - - - - - - - - - - - - - - - - - - - - -[1] &quot;bus&quot;
-## [1] &quot;BUS 101. Foundations of Business. (2)&quot;
-## - - - - - - - - - - - - - - - - - - - - - - - - -- - - - - - - - - - - - - - - - - - - - - - - - -[1] &quot;isa&quot;
-## [1] &quot;ISA 125. Introduction to Business Statistics. (3)&quot;
-## - - - - - - - - - - - - - - - - - - - - - - - - -- - - - - - - - - - - - - - - - - - - - - - - - -[1] &quot;mkt&quot;
-## [1] &quot;MKT 177. Independent Studies. (0-6; maximum 10)&quot;
-## - - - - - - - - - - - - - - - - - - - - - - - - -</code></pre>
-</div>
-<div id="re-examining-the-prior-example-with-the-purrr-package" class="section level2" number="3">
-<h2><span class="header-section-number">3</span> Re-examining the prior
-example with the <code>purrr</code> package</h2>
-<p>My preferred approach with the purrr functons is to first create my
-ownfunction and then use it within the package</p>
-<pre class="r"><code>scrape_mu_bulletin = function(dept_url){
-  webpage = rvest::read_html(dept_url)
-  
-  webpage |&gt; rvest::html_elements(&quot;strong&quot;) |&gt; rvest::html_text2() -&gt; titles
-  webpage |&gt; 
-    rvest::html_elements(&quot;#sc_sccoursedescs &gt; div &gt; p.courseblockdesc&quot;) |&gt; 
-    rvest::html_text2() -&gt; descs
-  
-  df = data.frame(title = titles, desc = descs)
-  
-  return(df)
-}
-
-test = scrape_mu_bulletin(&quot;https://bulletin.miamioh.edu/courses-instruction/bus/&quot;)
-
-dept_abbr = c(&#39;acc&#39;, &#39;bus&#39;, &#39;isa&#39;, &#39;mkt&#39;)
-my_urls = paste0(&quot;https://bulletin.miamioh.edu/courses-instruction/&quot;, # single chr string
-                 dept_abbr, # vector of 4 obs
-                 &quot;/&quot;) # single chr string
-
-
-# the map function take one or more inputs (depending on the function you are using)
-# in this example, we only have 1 input for our function
-# sp we used map_() instead of map2_() [2 is for 2 inputs]
-#.x = the vector you are iterating over
-courses_df_from_purrr = purrr::map_df(.x = my_urls, .f = scrape_mu_bulletin)
-
-head(courses_df_from_purrr)</code></pre>
-<pre><code>##                                                       title
-## 1           ACC 177. Independent Studies. (0-6; maximum 10)
-## 2       ACC 211. Accounting for the Non-Business Major. (3)
-## 3        ACC 221. Introduction to Financial Accounting. (3)
-## 4       ACC 222. Introduction to Managerial Accounting. (3)
-## 5 ACC 256. Accountancy Career Exploration and Planning. (1)
-## 6           ACC 277. Independent Studies. (0-6; maximum 10)
-##                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     desc
-## 1                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
-## 2                                                                                                                                                                                                                                                                                                                                                                                                                                                   Introduction to basic accounting and management concepts for an individual who would like to own, manage or start a business one day. Focus is on the most important areas a user (not a preparer) of financial statements needs to know to effectively run or manage a business such as the following: interpreting financial statements, knowledge of simple and useful tax concepts, analyzing budgeting, assessing cash flow, and making business decisions using financial data. Not open to business majors.\n
-## 3                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              Introduction to the purposes of financial statements and the recognition, measurement, and disclosure concepts and methods underlying financial statements. Focus is on preparing, using and interpreting financial statements and on understanding the impact of transactions and events on financial statements and financial ratios.\n
-## 4                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Introduction to the uses of accounting information provided to managers in production, service, and resale businesses. Focus is on classifying, measuring, and analyzing product and service costs for decision making, preparing budgets, and evaluating performance.\n
-## 5 This course will explore the historical, current and possible future role of the accounting profession in the domestic and global economy. Students will understand the various standard setters and opportunities for the accounting profession to interact and influence the outcomes of business organizations. This course will assist accountancy majors to explore career interests in future accountancy positions within public accounting, private industry or governmental positions. Specifically, the course will focus on helping students understand the variety of career opportunities available to accounting majors. The course will assist students with understanding the key career planning and job searching opportunities at Miami University. Students will be exposed to the timeline and types of events they can expect in the interview process and will be informed about how best to prepare for and be successful in executing each.\n
-## 6</code></pre>
-</div>
-<div id="scraping-plane-crash-data" class="section level2" number="4">
-<h2><span class="header-section-number">4</span> Scraping Plane Crash
-Data</h2>
-<p>We will use <code>purrr</code> based on a class vote.</p>
+<div id="plane-crash-example" class="section level2" number="0.1">
+<h2><span class="header-section-number">0.1</span> plane crash
+example</h2>
 <pre class="r"><code>year = 2025
 
 crash_url = paste0(&#39;https://www.planecrashinfo.com/&#39;, year, &#39;/&#39;, year, &#39;.htm&#39;)
@@ -1717,10 +1612,90 @@ crash_page</code></pre>
 <pre class="r"><code># How many &lt;table&gt; elements are on the page?
 crash_tables &lt;- crash_page |&gt;
   rvest::html_elements(&quot;table&quot;) |&gt;
-  rvest::html_table()</code></pre>
+  rvest::html_table()
+
+crash_df = crash_tables[[1]]
+
+# from a cleaning perspective, there are several things that can be changed:
+# [1] replace the colnames with the first row
+# [2] have better column types (e.g., date being a date instead of chr)
+# [3] there are possible things you can do to clean the data within columns; e.g., split columns that contain multiple pieces of info
+# Column 4 has: fatalities/# of passengers
+
+# subsetting the dataframe
+# for todays class, we will focus on the first 2
+colnames(crash_df) = crash_df[1, ]
+# then delete the first row
+crash_df = crash_df[-1, ]
+
+crash_df = crash_df |&gt; 
+  # converts date into a date object
+  dplyr::mutate(Date = lubridate::dmy(Date))
+
+head(crash_df)</code></pre>
+<pre><code>## # A tibble: 6 × 4
+##   Date       `Location / Operator`             Aircraft Type / Regi…¹ Fatalities
+##   &lt;date&gt;     &lt;chr&gt;                             &lt;chr&gt;                  &lt;chr&gt;     
+## 1 2025-01-07 Off Rottnest Island, WA, Austral… Cessna 208 Caravan 67… 3/7(0)    
+## 2 2025-01-29 Washington DCAmerican Eagle / US… Canadair CRJ-701ER /U… 67/67(0)  
+## 3 2025-01-29 GPOC Unity Airstrip, South Sudan… Beechcraft 1900D5X-RHB 20/21(0)  
+## 4 2025-01-31 Philadelphia, PennsylvaniaMed Je… Learjet 55XA-UCI       6/6(1)    
+## 5 2025-02-06 Norton SoundBering Air            Cessna 208B Grand Car… 10/10(0)  
+## 6 2025-02-17 Toronto, CanadaDelta Connection,… Bombardier CRJ-900LRN… 0/80(0)   
+## # ℹ abbreviated name: ¹​`Aircraft Type / Registration`</code></pre>
+<p>#```{r} page = rvest::read_html(“<a href="https://isa401-salvage.vercel.app/registry?start=1" class="uri">https://isa401-salvage.vercel.app/registry?start=1</a>”)
+classes = page |&gt; rvest::html_elements(“.Dreadnought”) |&gt;
+rvest::html_text2() length(classes) # check this first: one per card</p>
+</div>
+<div id="from-clicking-on-the-site-we-saw-that-our-page-contains-50" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> from clicking on the
+site, we saw that our page contains 50</h1>
+<p>base = “<a href="https://isa401-salvage.vercel.app" class="uri">https://isa401-salvage.vercel.app</a>” starts = seq(from =
+1, to = 351, by = 50) pages = vector(“list”, length(starts)) for (i in
+seq_along(starts)) { pg = rvest::read_html(paste0(base,
+“/registry?start=”, starts[i])) pages[[i]] = data.frame( class = pg
+|&gt; rvest::html_elements(“div &gt; ul &gt; li:nth-child(1) &gt; span”)
+|&gt; rvest::html_text2(), value = pg |&gt; rvest::html_elements(“div
+&gt; ul &gt; li:nth-child(3) &gt; span”) |&gt; rvest::html_text2()|&gt;
+stringr::str_remove(” MCr”) ) Sys.sleep(1) # robots.txt asks for it }
+registry = dplyr::bind_rows(pages) # 400 rows?</p>
+<p>registry |&gt; dplyr::filter(class == “Dreadnought”) |&gt;
+dplyr::mutate(value = as.numeric(value))-&gt; Dreadnoughts_df</p>
+<p>sum(Dreadnaughts_df$value) #```</p>
+<div id="structured-text-extraction" class="section level2" number="1.1">
+<h2><span class="header-section-number">1.1</span> Structured text
+extraction</h2>
+<div id="course-information" class="section level3" number="1.1.1">
+<h3><span class="header-section-number">1.1.1</span> Course
+Information</h3>
+<pre class="r"><code>chat = ellmer::chat_openai(
+  model = &quot;gpt-5.6-luna&quot;,
+  params = ellmer::params(reasoning_effort = &quot;none&quot;)
+)
+
+isa125_text = rvest::read_html(&quot;https://bulletin.miamioh.edu/courses-instruction/isa/&quot;) |&gt; 
+  # for this example, only the first course
+  rvest::html_element(&quot;#sc_sccoursedescs &gt; div:nth-child(1)&quot;) |&gt;  rvest::html_text2()
+
+chat$chat_structured(
+  isa125_text,
+  type = ellmer::type_object(
+    name = ellmer::type_string(
+      description = &quot;Name of the course. For example, ISA 235. Information Technology and the Intelligent Enterprise. Do not include the parentehsis for the credit hour and do not end with a period&quot;
+    ),
+    description = ellmer::type_string(description = &quot;The description of the course without the prereqs.&quot;) 
+  )
+)</code></pre>
+<pre><code>## $name
+## [1] &quot;ISA 125. Introduction to Business Statistics&quot;
+## 
+## $description
+## [1] &quot;This course provides an introduction to data, probability, sampling and its importance to analytical decision-making in business. Upon successful completion of this course, students will have the foundational skills necessary to summarize data, describe relationships among variables, and conduct one-sample and two-sample statistical inference. Note: Credit for graduation will not be given for more than one of STA 125, ISA 125, STA 261, STA 301, or STA 368.&quot;</code></pre>
+</div>
+</div>
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIkNsYXNzIDExIg0KYXV0aG9yOiAiQXJ0aWUgUGFwYW5kcmVhIg0KZGF0ZTogIjIwMjYtMDktMzAiDQpvdXRwdXQ6IA0KICBodG1sX2RvY3VtZW50Og0KICAgIHRvYzogVFJVRQ0KICAgIHRvY19mbG9hdDogVFJVRQ0KICAgIG51bWJlcl9zZWN0aW9uczogVFJVRQ0KICAgIGNvZGVfZm9sZGluZzogc2hvdw0KICAgIGNvZGVfZG93bmxvYWQ6IFRSVUUNCi0tLQ0KDQpgYGB7ciBzZXR1cCwgaW5jbHVkZT1GQUxTRX0NCmtuaXRyOjpvcHRzX2NodW5rJHNldChlY2hvID0gVFJVRSkNCmBgYA0KDQojIyBMZWFybmluZyBvYmplY3RpdmVzIGZvciBUb2RheQ0KDQotIFNjcmFwZSBtdWx0aXBsZSB3ZWJwYWdlcyB1c2luZyBgZm9yYCBsb29wczsNCg0KLSBTY3JhcGUgbXVsdGlwbGUgd2VicGFnZXMgdXNpbmcgdGhlIGBwdXJycjo6bWFwKClgIHR5cGUgZnVuY3Rpb25zLCB3aGljaCB3b3VsZCBhbHNvIG1ha2UgeW91IHdyaXRlIHlvdXIgb3duIGZ1bmN0aW9ucyBpbiBSLg0KDQojIyBFeHRlbmRpbmcgdGhlIENvdXJzZSBCdWxsZXRpbiBTY3JhcGUgZm9yIG11bHRpcGxlIGRlcGFydG1lbnRzDQoNCiBGb3IgdGhlIHNha2Ugb2YgdGhlIGV4YW1wbGUsIGxldCB1cyBzY3JhcGUgdGhlIGZvbGxvd2luZyBwYWdlczoNCiBbSVNBXShodHRwczovL2J1bGxldGluLm1pYW1pb2guZWR1L2NvdXJzZXMtaW5zdHJ1Y3Rpb24vaXNhLykgYW5kDQogW01LVF0oaHR0cHM6Ly9idWxsZXRpbi5taWFtaW9oLmVkdS9jb3Vyc2VzLWluc3RydWN0aW9uL21rdC8pLiBGcm9tIHRoZSBsb2dpYyBzaG93biBpbiBjbGFzcywgeW91IGNhbiBlc3NlbnRpYWxseSBkbyB0aGF0IGZvciBhbGwgZnNiIGRlcGFydG1lbnRzLg0KIA0KIE5vdGUgdGhhdCBpZiB5b3UgYXJlIGRvaW5nIGl0IGZvciBqdXN0IGEgZmV3IGRlcGFydG1lbnRzLCB5b3UgY2FuIGp1c3QgcmVwZWF0IHlvdXIgY29kZSBhIGZldyB0aW1lczsgaG93ZXZlciwgdGhpcyBpcyBiYWQgcHJhY3RpY2UgYXMgc28gd2Ugd2lsbCBub3QgZG8gdGhpcyBpbiBjbGFzcy4gU29mdHdhcmUgZW5naW5lZXJzIHRlbmQgdG8gcmVmZXIgdG8gdGhpcyBhcyA6ICoqRFJZKiogKGRvbid0IHJlcGVhdCB5b3Vyc2VsZikNCiANCmBgYHtyIGJ1bGxldGlufQ0KZGVwdF9hYmJyID0gYygnYWNjJywgJ2J1cycsICdpc2EnLCAnbWt0JykgIyBleHRlbmRpbmcgdGhlIGV4YW1wbGUgdG8gNCBkZXB0cw0KIyBsaW5lIGJlbG93IGlsbHVzdHJhdGVzIGhvdyB0aGUgdXJsIGNhbiBiZSBjb25zdHJ1Y3RlZCBieSBwYXN0aW5nKSAoaS5lLiwgbm8gc3BhY2UpIHRoZSBiYXNlX3VybCwgZGVwdF9hYmJyZXZpYXRpb24gYW5kIHRoZSBmb3J3YXJkIHNsYXNoDQoNCg0KDQpjb3Vyc2VzX2RmID0gZGF0YS5mcmFtZSgpICMgaW5pdGlhbGl6ZSB0aGUgY29udGFpbmVyDQpmb3IgKGRlcHRfbmFtZSBpbiBkZXB0X2FiYnIpIHsNCiAgY2F0KHJlcCgiLSIsIDI1KSkNCiAgcHJpbnQoZGVwdF9uYW1lKQ0KICBkZXB0X3VybCA9IHBhc3RlMCgiaHR0cHM6Ly9idWxsZXRpbi5taWFtaW9oLmVkdS9jb3Vyc2VzLWluc3RydWN0aW9uLyIsIGRlcHRfbmFtZSwgIi8iKQ0KICANCiAgIyBmb3IgdGhlIHRpdGxlcywgSSB3aWxsIHVzZSB0aGUgc2VsZWN0b3IgZ2FkZ2V0IGFuZCBmb3IgdGhlIGRlc2MsIEkgd2lsbCB1c2UgdGhlIGluc3BlY3RvciAodG8gc2hvdyB5b3UgdGhlIGFsdGVybmF0aXZlIENTUyBzZWxlY3RvcnMgZm9yIHdoYXQgd2UgZGlkIG9uIE1vbikNCiAgd2VicGFnZSA9IHJ2ZXN0OjpyZWFkX2h0bWwoZGVwdF91cmwpDQogIA0KICB3ZWJwYWdlIHw+IHJ2ZXN0OjpodG1sX2VsZW1lbnRzKCJzdHJvbmciKSB8PiBydmVzdDo6aHRtbF90ZXh0MigpIC0+IHRpdGxlcw0KICB3ZWJwYWdlIHw+IA0KICAgIHJ2ZXN0OjpodG1sX2VsZW1lbnRzKCIjc2Nfc2Njb3Vyc2VkZXNjcyA+IGRpdiA+IHAuY291cnNlYmxvY2tkZXNjIikgfD4gDQogICAgcnZlc3Q6Omh0bWxfdGV4dDIoKSAtPiBkZXNjcw0KICANCiAgZGYgPSBkYXRhLmZyYW1lKHRpdGxlID0gdGl0bGVzLCBkZXNjID0gZGVzY3MpDQogIGRmJHRpdGxlWzFdIHw+IHByaW50KCkgIyBzaG93aW5nIG9ubHkgdGhlIGZpcnN0IGNvdXJzZSB0aXRsZQ0KICANCiAgY291cnNlc19kZiA9IHJiaW5kKGNvdXJzZXNfZGYsIGRmKQ0KICBjYXQocmVwKCItIiwgMjUpKQ0KfQ0KDQoNCg0KDQoNCg0KDQoNCg0KYGBgDQogDQoNCiMjIFJlLWV4YW1pbmluZyB0aGUgcHJpb3IgZXhhbXBsZSB3aXRoIHRoZSBgcHVycnJgIHBhY2thZ2UNCg0KTXkgcHJlZmVycmVkIGFwcHJvYWNoIHdpdGggdGhlIHB1cnJyIGZ1bmN0b25zIGlzIHRvIGZpcnN0IGNyZWF0ZSBteSBvd25mdW5jdGlvbiBhbmQgdGhlbiB1c2UgaXQgd2l0aGluIHRoZSBwYWNrYWdlDQoNCmBgYHtyfQ0Kc2NyYXBlX211X2J1bGxldGluID0gZnVuY3Rpb24oZGVwdF91cmwpew0KICB3ZWJwYWdlID0gcnZlc3Q6OnJlYWRfaHRtbChkZXB0X3VybCkNCiAgDQogIHdlYnBhZ2UgfD4gcnZlc3Q6Omh0bWxfZWxlbWVudHMoInN0cm9uZyIpIHw+IHJ2ZXN0OjpodG1sX3RleHQyKCkgLT4gdGl0bGVzDQogIHdlYnBhZ2UgfD4gDQogICAgcnZlc3Q6Omh0bWxfZWxlbWVudHMoIiNzY19zY2NvdXJzZWRlc2NzID4gZGl2ID4gcC5jb3Vyc2VibG9ja2Rlc2MiKSB8PiANCiAgICBydmVzdDo6aHRtbF90ZXh0MigpIC0+IGRlc2NzDQogIA0KICBkZiA9IGRhdGEuZnJhbWUodGl0bGUgPSB0aXRsZXMsIGRlc2MgPSBkZXNjcykNCiAgDQogIHJldHVybihkZikNCn0NCg0KdGVzdCA9IHNjcmFwZV9tdV9idWxsZXRpbigiaHR0cHM6Ly9idWxsZXRpbi5taWFtaW9oLmVkdS9jb3Vyc2VzLWluc3RydWN0aW9uL2J1cy8iKQ0KDQpkZXB0X2FiYnIgPSBjKCdhY2MnLCAnYnVzJywgJ2lzYScsICdta3QnKQ0KbXlfdXJscyA9IHBhc3RlMCgiaHR0cHM6Ly9idWxsZXRpbi5taWFtaW9oLmVkdS9jb3Vyc2VzLWluc3RydWN0aW9uLyIsICMgc2luZ2xlIGNociBzdHJpbmcNCiAgICAgICAgICAgICAgICAgZGVwdF9hYmJyLCAjIHZlY3RvciBvZiA0IG9icw0KICAgICAgICAgICAgICAgICAiLyIpICMgc2luZ2xlIGNociBzdHJpbmcNCg0KDQojIHRoZSBtYXAgZnVuY3Rpb24gdGFrZSBvbmUgb3IgbW9yZSBpbnB1dHMgKGRlcGVuZGluZyBvbiB0aGUgZnVuY3Rpb24geW91IGFyZSB1c2luZykNCiMgaW4gdGhpcyBleGFtcGxlLCB3ZSBvbmx5IGhhdmUgMSBpbnB1dCBmb3Igb3VyIGZ1bmN0aW9uDQojIHNwIHdlIHVzZWQgbWFwXygpIGluc3RlYWQgb2YgbWFwMl8oKSBbMiBpcyBmb3IgMiBpbnB1dHNdDQojLnggPSB0aGUgdmVjdG9yIHlvdSBhcmUgaXRlcmF0aW5nIG92ZXINCmNvdXJzZXNfZGZfZnJvbV9wdXJyciA9IHB1cnJyOjptYXBfZGYoLnggPSBteV91cmxzLCAuZiA9IHNjcmFwZV9tdV9idWxsZXRpbikNCg0KaGVhZChjb3Vyc2VzX2RmX2Zyb21fcHVycnIpDQpgYGANCg0KIyMgU2NyYXBpbmcgUGxhbmUgQ3Jhc2ggRGF0YQ0KDQpXZSB3aWxsIHVzZSBgcHVycnJgIGJhc2VkIG9uIGEgY2xhc3Mgdm90ZS4NCg0KYGBge3J9DQp5ZWFyID0gMjAyNQ0KDQpjcmFzaF91cmwgPSBwYXN0ZTAoJ2h0dHBzOi8vd3d3LnBsYW5lY3Jhc2hpbmZvLmNvbS8nLCB5ZWFyLCAnLycsIHllYXIsICcuaHRtJykNCg0KY3Jhc2hfcGFnZSA8LSBydmVzdDo6cmVhZF9odG1sKGNyYXNoX3VybCwgZW5jb2RpbmcgPSAiSVNPLTg4NTktMSIpDQoNCiMgVGhpcyBzaG91bGQgbm93IHByaW50IHdpdGhvdXQgdGhlIGVycm9yDQpjcmFzaF9wYWdlDQpgYGANCg0KYGBge3J9DQojIEhvdyBtYW55IDx0YWJsZT4gZWxlbWVudHMgYXJlIG9uIHRoZSBwYWdlPw0KY3Jhc2hfdGFibGVzIDwtIGNyYXNoX3BhZ2UgfD4NCiAgcnZlc3Q6Omh0bWxfZWxlbWVudHMoInRhYmxlIikgfD4NCiAgcnZlc3Q6Omh0bWxfdGFibGUoKQ0KYGBgDQoNCg0KDQoNCg0KDQoNCg0KDQoNCg0KDQoNCg==</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIkNsYXNzIDEyIg0KYXV0aG9yOiAiQXJ0aWUgUGFwYW5kcmVhIg0KZGF0ZTogIjIwMjYtMTAtMDUiDQpvdXRwdXQ6IA0KICBodG1sX2RvY3VtZW50Og0KICAgIHRvYzogVFJVRQ0KICAgIHRvY19mbG9hdDogVFJVRQ0KICAgIG51bWJlcl9zZWN0aW9uczogVFJVRQ0KICAgIGNvZGVfZm9sZGluZzogc2hvdw0KICAgIGNvZGVfZG93bmxvYWQ6IFRSVUUNCi0tLQ0KDQpgYGB7ciBzZXR1cCwgaW5jbHVkZT1GQUxTRX0NCmtuaXRyOjpvcHRzX2NodW5rJHNldChlY2hvID0gVFJVRSkNCmBgYA0KDQojIyBwbGFuZSBjcmFzaCBleGFtcGxlDQpgYGB7cn0NCnllYXIgPSAyMDI1DQoNCmNyYXNoX3VybCA9IHBhc3RlMCgnaHR0cHM6Ly93d3cucGxhbmVjcmFzaGluZm8uY29tLycsIHllYXIsICcvJywgeWVhciwgJy5odG0nKQ0KDQpjcmFzaF9wYWdlIDwtIHJ2ZXN0OjpyZWFkX2h0bWwoY3Jhc2hfdXJsLCBlbmNvZGluZyA9ICJJU08tODg1OS0xIikNCg0KIyBUaGlzIHNob3VsZCBub3cgcHJpbnQgd2l0aG91dCB0aGUgZXJyb3INCmNyYXNoX3BhZ2UNCmBgYA0KDQpgYGB7ciBjcmFzaGVzfQ0KIyBIb3cgbWFueSA8dGFibGU+IGVsZW1lbnRzIGFyZSBvbiB0aGUgcGFnZT8NCmNyYXNoX3RhYmxlcyA8LSBjcmFzaF9wYWdlIHw+DQogIHJ2ZXN0OjpodG1sX2VsZW1lbnRzKCJ0YWJsZSIpIHw+DQogIHJ2ZXN0OjpodG1sX3RhYmxlKCkNCg0KY3Jhc2hfZGYgPSBjcmFzaF90YWJsZXNbWzFdXQ0KDQojIGZyb20gYSBjbGVhbmluZyBwZXJzcGVjdGl2ZSwgdGhlcmUgYXJlIHNldmVyYWwgdGhpbmdzIHRoYXQgY2FuIGJlIGNoYW5nZWQ6DQojIFsxXSByZXBsYWNlIHRoZSBjb2xuYW1lcyB3aXRoIHRoZSBmaXJzdCByb3cNCiMgWzJdIGhhdmUgYmV0dGVyIGNvbHVtbiB0eXBlcyAoZS5nLiwgZGF0ZSBiZWluZyBhIGRhdGUgaW5zdGVhZCBvZiBjaHIpDQojIFszXSB0aGVyZSBhcmUgcG9zc2libGUgdGhpbmdzIHlvdSBjYW4gZG8gdG8gY2xlYW4gdGhlIGRhdGEgd2l0aGluIGNvbHVtbnM7IGUuZy4sIHNwbGl0IGNvbHVtbnMgdGhhdCBjb250YWluIG11bHRpcGxlIHBpZWNlcyBvZiBpbmZvDQojIENvbHVtbiA0IGhhczogZmF0YWxpdGllcy8jIG9mIHBhc3NlbmdlcnMNCg0KIyBzdWJzZXR0aW5nIHRoZSBkYXRhZnJhbWUNCiMgZm9yIHRvZGF5cyBjbGFzcywgd2Ugd2lsbCBmb2N1cyBvbiB0aGUgZmlyc3QgMg0KY29sbmFtZXMoY3Jhc2hfZGYpID0gY3Jhc2hfZGZbMSwgXQ0KIyB0aGVuIGRlbGV0ZSB0aGUgZmlyc3Qgcm93DQpjcmFzaF9kZiA9IGNyYXNoX2RmWy0xLCBdDQoNCmNyYXNoX2RmID0gY3Jhc2hfZGYgfD4gDQogICMgY29udmVydHMgZGF0ZSBpbnRvIGEgZGF0ZSBvYmplY3QNCiAgZHBseXI6Om11dGF0ZShEYXRlID0gbHVicmlkYXRlOjpkbXkoRGF0ZSkpDQoNCmhlYWQoY3Jhc2hfZGYpDQoNCmBgYA0KDQojYGBge3J9DQpwYWdlID0gcnZlc3Q6OnJlYWRfaHRtbCgiaHR0cHM6Ly9pc2E0MDEtc2FsdmFnZS52ZXJjZWwuYXBwL3JlZ2lzdHJ5P3N0YXJ0PTEiKQ0KY2xhc3NlcyA9IHBhZ2UgfD4NCiAgcnZlc3Q6Omh0bWxfZWxlbWVudHMoIi5EcmVhZG5vdWdodCIpIHw+DQogIHJ2ZXN0OjpodG1sX3RleHQyKCkNCmxlbmd0aChjbGFzc2VzKSAgICMgY2hlY2sgdGhpcyBmaXJzdDogb25lIHBlciBjYXJkDQoNCiMgZnJvbSBjbGlja2luZyBvbiB0aGUgc2l0ZSwgd2Ugc2F3IHRoYXQgb3VyIHBhZ2UgY29udGFpbnMgNTANCmJhc2UgPSAiaHR0cHM6Ly9pc2E0MDEtc2FsdmFnZS52ZXJjZWwuYXBwIg0Kc3RhcnRzID0gc2VxKGZyb20gPSAxLCB0byA9IDM1MSwgYnkgPSA1MCkNCnBhZ2VzID0gdmVjdG9yKCJsaXN0IiwgbGVuZ3RoKHN0YXJ0cykpDQpmb3IgKGkgaW4gc2VxX2Fsb25nKHN0YXJ0cykpIHsNCiAgcGcgPSBydmVzdDo6cmVhZF9odG1sKHBhc3RlMChiYXNlLCAiL3JlZ2lzdHJ5P3N0YXJ0PSIsIHN0YXJ0c1tpXSkpDQogIHBhZ2VzW1tpXV0gPSBkYXRhLmZyYW1lKA0KICAgIGNsYXNzID0gcGcgfD4gcnZlc3Q6Omh0bWxfZWxlbWVudHMoImRpdiA+IHVsID4gbGk6bnRoLWNoaWxkKDEpID4gc3BhbiIpIHw+IA0KICAgICAgcnZlc3Q6Omh0bWxfdGV4dDIoKSwNCiAgICB2YWx1ZSA9IHBnIHw+IHJ2ZXN0OjpodG1sX2VsZW1lbnRzKCJkaXYgPiB1bCA+IGxpOm50aC1jaGlsZCgzKSA+IHNwYW4iKSB8PiANCiAgICAgIHJ2ZXN0OjpodG1sX3RleHQyKCl8PiBzdHJpbmdyOjpzdHJfcmVtb3ZlKCIgTUNyIikNCiAgKQ0KICBTeXMuc2xlZXAoMSkgICAjIHJvYm90cy50eHQgYXNrcyBmb3IgaXQNCn0NCnJlZ2lzdHJ5ID0gZHBseXI6OmJpbmRfcm93cyhwYWdlcykgICAjIDQwMCByb3dzPw0KDQpyZWdpc3RyeSB8PiBkcGx5cjo6ZmlsdGVyKGNsYXNzID09ICJEcmVhZG5vdWdodCIpIHw+IA0KICBkcGx5cjo6bXV0YXRlKHZhbHVlID0gYXMubnVtZXJpYyh2YWx1ZSkpLT4gRHJlYWRub3VnaHRzX2RmDQoNCnN1bShEcmVhZG5hdWdodHNfZGYkdmFsdWUpDQojYGBgDQoNCiMjIFN0cnVjdHVyZWQgdGV4dCBleHRyYWN0aW9uDQojIyMgQ291cnNlIEluZm9ybWF0aW9uDQpgYGB7ciBjb3Vyc2VzfQ0KY2hhdCA9IGVsbG1lcjo6Y2hhdF9vcGVuYWkoDQogIG1vZGVsID0gImdwdC01LjYtbHVuYSIsDQogIHBhcmFtcyA9IGVsbG1lcjo6cGFyYW1zKHJlYXNvbmluZ19lZmZvcnQgPSAibm9uZSIpDQopDQoNCmlzYTEyNV90ZXh0ID0gcnZlc3Q6OnJlYWRfaHRtbCgiaHR0cHM6Ly9idWxsZXRpbi5taWFtaW9oLmVkdS9jb3Vyc2VzLWluc3RydWN0aW9uL2lzYS8iKSB8PiANCiAgIyBmb3IgdGhpcyBleGFtcGxlLCBvbmx5IHRoZSBmaXJzdCBjb3Vyc2UNCiAgcnZlc3Q6Omh0bWxfZWxlbWVudCgiI3NjX3NjY291cnNlZGVzY3MgPiBkaXY6bnRoLWNoaWxkKDEpIikgfD4gIHJ2ZXN0OjpodG1sX3RleHQyKCkNCg0KY2hhdCRjaGF0X3N0cnVjdHVyZWQoDQogIGlzYTEyNV90ZXh0LA0KICB0eXBlID0gZWxsbWVyOjp0eXBlX29iamVjdCgNCiAgICBuYW1lID0gZWxsbWVyOjp0eXBlX3N0cmluZygNCiAgICAgIGRlc2NyaXB0aW9uID0gIk5hbWUgb2YgdGhlIGNvdXJzZS4gRm9yIGV4YW1wbGUsIElTQSAyMzUuIEluZm9ybWF0aW9uIFRlY2hub2xvZ3kgYW5kIHRoZSBJbnRlbGxpZ2VudCBFbnRlcnByaXNlLiBEbyBub3QgaW5jbHVkZSB0aGUgcGFyZW50ZWhzaXMgZm9yIHRoZSBjcmVkaXQgaG91ciBhbmQgZG8gbm90IGVuZCB3aXRoIGEgcGVyaW9kIg0KICAgICksDQogICAgZGVzY3JpcHRpb24gPSBlbGxtZXI6OnR5cGVfc3RyaW5nKGRlc2NyaXB0aW9uID0gIlRoZSBkZXNjcmlwdGlvbiBvZiB0aGUgY291cnNlIHdpdGhvdXQgdGhlIHByZXJlcXMuIikgDQogICkNCikNCmBgYA0KDQoNCg==</div>
 
 
 </div>
@@ -1758,7 +1733,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
-  window.initializeSourceEmbed("class11.Rmd");
+  window.initializeSourceEmbed("class12.Rmd");
   window.initializeCodeFolding("show" === "show");
 });
 </script>
