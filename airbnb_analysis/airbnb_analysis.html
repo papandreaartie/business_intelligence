@@ -1653,9 +1653,250 @@ listings |&gt;
 </div>
 <div id="task-2" class="section level2" number="2">
 <h2><span class="header-section-number">2</span> Task 2</h2>
+<pre class="r"><code># keep entire home/apt that accommodates at least 4, has at least 10 reviews, and reviews 4.8 or better
+columbus_value = listings |&gt; 
+  dplyr::filter(
+    room_type == &quot;Entire home/apt&quot;,
+    accommodates &gt;= 4,
+    number_of_reviews &gt;= 10,
+    review_scores_rating &gt;= 4.8
+  ) |&gt; # calculate price per person
+  dplyr::mutate(
+    price_per_person = price / accommodates
+  ) |&gt; # group by city and neighbourhood and calculate median price per person
+  dplyr::group_by(city, neighbourhood) |&gt; 
+  dplyr::summarise(
+    median_price_per_person = median(price_per_person, na.rm = TRUE),
+    listing_count = dplyr::n(),
+    .groups = &quot;drop&quot;
+  ) |&gt; # keep columbus neighbourhoods with at least 20 listings
+  dplyr::filter(
+    listing_count &gt;= 20,
+    city == &quot;Columbus&quot;
+  ) |&gt; 
+  dplyr::arrange(median_price_per_person)
+
+columbus_value</code></pre>
+<pre><code>## # A tibble: 8 × 4
+##   city     neighbourhood         median_price_per_person listing_count
+##   &lt;chr&gt;    &lt;chr&gt;                                   &lt;dbl&gt;         &lt;int&gt;
+## 1 Columbus North Linden                             32.6            20
+## 2 Columbus South Linden                             41              24
+## 3 Columbus Downtown                                 41.8            22
+## 4 Columbus Near East                                42.8            82
+## 5 Columbus Near North/University                    43.9           302
+## 6 Columbus West Olentangy                           45              35
+## 7 Columbus Near South                               46             129
+## 8 Columbus Clintonville                             47.1            53</code></pre>
+</div>
+<div id="task-3" class="section level2" number="3">
+<h2><span class="header-section-number">3</span> Task 3</h2>
+<pre class="r"><code># calculate median price, reviews per month, and estimated revenue over the last year by city and room type
+earnings = listings |&gt; 
+  dplyr::group_by(city, room_type) |&gt; 
+  dplyr::summarise(
+    dplyr::across(
+      c(price, reviews_per_month, estimated_revenue_l365d),
+      ~ median(.x, na.rm = TRUE)
+    ),
+    .groups = &quot;drop&quot;
+  )
+
+# calculate median estimated revenue of Twin Cities entire homes
+earnings |&gt; 
+  dplyr::filter(
+    city == &quot;Twin Cities&quot;,
+    room_type == &quot;Entire home/apt&quot;
+  )</code></pre>
+<pre><code>## # A tibble: 1 × 5
+##   city        room_type       price reviews_per_month estimated_revenue_l365d
+##   &lt;chr&gt;       &lt;chr&gt;           &lt;dbl&gt;             &lt;dbl&gt;                   &lt;dbl&gt;
+## 1 Twin Cities Entire home/apt  268.              1.46                   19619</code></pre>
+</div>
+<div id="task-4" class="section level2" number="4">
+<h2><span class="header-section-number">4</span> Task 4</h2>
+<pre class="r"><code># Within each city, sort listings by estimated revenue in the last year and mark the top 10%
+concentration = listings |&gt; 
+  dplyr::group_by(city) |&gt; 
+  dplyr::arrange(dplyr::desc(estimated_revenue_l365d), .by_group = TRUE) |&gt; 
+  dplyr::mutate(
+    top_10 = dplyr::row_number() &lt;= ceiling(0.10 * dplyr::n())
+  ) |&gt; 
+  dplyr::summarise(
+    top_10_revenue = sum(
+      estimated_revenue_l365d[top_10],
+      na.rm = TRUE
+    ), # also calculate total revenue to compare against top 10%
+    total_revenue = sum(
+      estimated_revenue_l365d,
+      na.rm = TRUE
+    ),
+    percent_revenue = top_10_revenue / total_revenue * 100,
+    .groups = &quot;drop&quot;
+  )
+
+# Columbus&#39; total estimated revenue by top 10%
+concentration |&gt; 
+  dplyr::filter(city == &quot;Columbus&quot;)</code></pre>
+<pre><code>## # A tibble: 1 × 4
+##   city     top_10_revenue total_revenue percent_revenue
+##   &lt;chr&gt;             &lt;dbl&gt;         &lt;dbl&gt;           &lt;dbl&gt;
+## 1 Columbus       23710876      65713747            36.1</code></pre>
+</div>
+<div id="task-5" class="section level2" number="5">
+<h2><span class="header-section-number">5</span> Task 5</h2>
+<pre class="r"><code># join the october 2026 rows of availability to the entire homes listings
+year_ahead = availability |&gt; 
+  dplyr::filter(month == &quot;2026-10&quot;) |&gt; 
+  dplyr::inner_join(
+    listings,
+    by = &quot;id&quot;
+  ) |&gt; 
+  dplyr::filter(room_type == &quot;Entire home/apt&quot;) |&gt; # formula for mostly taken
+  dplyr::mutate(
+    mostly_taken = nights_available &lt; 0.5 * nights_in_month
+  ) |&gt; # report the city with the lowest share of mostly taken
+  dplyr::group_by(city) |&gt; 
+  dplyr::summarise(
+    share_mostly_taken = mean(mostly_taken, na.rm = TRUE),
+    .groups = &quot;drop&quot;
+  ) |&gt; 
+  dplyr::arrange(share_mostly_taken)
+
+year_ahead</code></pre>
+<pre><code>## # A tibble: 3 × 2
+##   city        share_mostly_taken
+##   &lt;chr&gt;                    &lt;dbl&gt;
+## 1 Columbus                 0.190
+## 2 Twin Cities              0.200
+## 3 Chicago                  0.218</code></pre>
+</div>
+<div id="task-6" class="section level2" number="6">
+<h2><span class="header-section-number">6</span> Task 6</h2>
+<pre class="r"><code># join reviews to listings, keep july 2025 through june 2026
+demand = reviews |&gt; 
+  dplyr::inner_join(
+    listings,
+    by = &quot;id&quot;
+  ) |&gt; 
+  dplyr::filter(
+    month &gt;= &quot;2025-07&quot;,
+    month &lt;= &quot;2026-06&quot;
+  ) |&gt; # total the reviews per city and month
+  dplyr::group_by(city, month) |&gt; 
+  dplyr::summarise(
+    total_reviews = dplyr::n(),
+    .groups = &quot;drop&quot;
+  )
+
+# report the twin cities busiest month and the ratio of its busiest to quietest month
+demand |&gt; 
+  dplyr::filter(city == &quot;Twin Cities&quot;) |&gt; 
+  dplyr::summarise(
+    busiest_month = month[which.max(total_reviews)],
+    busiest_reviews = max(total_reviews),
+    quietest_reviews = min(total_reviews),
+    ratio = max(total_reviews) / min(total_reviews)
+  )</code></pre>
+<pre><code>## # A tibble: 1 × 4
+##   busiest_month busiest_reviews quietest_reviews ratio
+##   &lt;chr&gt;                   &lt;int&gt;            &lt;int&gt; &lt;dbl&gt;
+## 1 2026-05                  2460             1477  1.67</code></pre>
+</div>
+<div id="task-7" class="section level2" number="7">
+<h2><span class="header-section-number">7</span> Task 7</h2>
+<pre class="r"><code># create new variable that labels hosts as superhost or other host
+superhost_premium = listings |&gt; 
+  dplyr::filter(
+    room_type == &quot;Entire home/apt&quot;,
+    host_is_superhost %in% c(&quot;t&quot;, &quot;f&quot;)
+  ) |&gt; 
+  dplyr::mutate(
+    host_type = dplyr::if_else(
+      host_is_superhost == &quot;t&quot;,
+      &quot;Superhost&quot;,
+      &quot;Other host&quot;
+    )
+  ) |&gt; # calculate median price and rating for each group by city
+  dplyr::group_by(city, host_type) |&gt; 
+  dplyr::summarise(
+    median_price = median(price, na.rm = TRUE),
+    median_rating = median(review_scores_rating, na.rm = TRUE),
+    .groups = &quot;drop&quot;
+  ) |&gt; 
+  dplyr::group_by(city) |&gt; 
+  dplyr::summarise(
+    superhost_median_price = median_price[host_type == &quot;Superhost&quot;],
+    other_host_median_price = median_price[host_type == &quot;Other host&quot;],
+    premium = superhost_median_price - other_host_median_price,
+    .groups = &quot;drop&quot;
+  )
+
+superhost_premium</code></pre>
+<pre><code>## # A tibble: 3 × 4
+##   city        superhost_median_price other_host_median_price premium
+##   &lt;chr&gt;                        &lt;dbl&gt;                   &lt;dbl&gt;   &lt;dbl&gt;
+## 1 Chicago                       292.                    248    43.8 
+## 2 Columbus                      225                     184.   40.5 
+## 3 Twin Cities                   267.                    268.   -1.38</code></pre>
+</div>
+<div id="task-8" class="section level2" number="8">
+<h2><span class="header-section-number">8</span> Task 8</h2>
+<pre class="r"><code># calculate the listings that have no rows in availability by city
+listings |&gt; 
+  dplyr::anti_join(availability, by = &quot;id&quot;) |&gt; 
+  dplyr::group_by(city) |&gt; 
+  dplyr::summarise(
+    listings_without_availability = dplyr::n(),
+    .groups = &quot;drop&quot;
+  )</code></pre>
+<pre><code>## # A tibble: 3 × 2
+##   city        listings_without_availability
+##   &lt;chr&gt;                               &lt;int&gt;
+## 1 Chicago                               267
+## 2 Columbus                               69
+## 3 Twin Cities                           120</code></pre>
+</div>
+<div id="task-b2" class="section level2" number="9">
+<h2><span class="header-section-number">9</span> Task B2</h2>
+<pre class="r"><code># compute the task 1 share for all cities
+task1_share = listings |&gt; 
+  dplyr::group_by(city) |&gt; 
+  dplyr::summarise(
+    task1_share = mean(listing_count &gt;= 10) * 100,
+    .groups = &quot;drop&quot;
+  )
+
+# compute the task 4 share for all cities
+task4_share = listings |&gt; 
+  dplyr::group_by(city) |&gt; 
+  dplyr::arrange(dplyr::desc(estimated_revenue_l365d), .by_group = TRUE) |&gt; 
+  dplyr::mutate(
+    top_10 = dplyr::row_number() &lt;= ceiling(0.10 * dplyr::n())
+  ) |&gt; 
+  dplyr::summarise(
+    task4_share = sum(
+      estimated_revenue_l365d[top_10],
+      na.rm = TRUE
+    ) /
+      sum(estimated_revenue_l365d, na.rm = TRUE) * 100,
+    .groups = &quot;drop&quot;
+  )
+
+# combine the two results
+shares = task1_share |&gt; 
+  dplyr::left_join(task4_share, by = &quot;city&quot;)
+
+shares</code></pre>
+<pre><code>## # A tibble: 3 × 3
+##   city        task1_share task4_share
+##   &lt;chr&gt;             &lt;dbl&gt;       &lt;dbl&gt;
+## 1 Chicago            31.9        40.7
+## 2 Columbus           37.1        36.1
+## 3 Twin Cities        17.2        40.3</code></pre>
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIkFpcmJuYiBBbmFseXNpcyINCmRhdGU6ICIyMDI2LTA5LTI4Ig0Kb3V0cHV0OiANCiAgaHRtbF9kb2N1bWVudDoNCiAgICB0b2M6IFRSVUUNCiAgICB0b2NfZmxvYXQ6IFRSVUUNCiAgICBudW1iZXJfc2VjdGlvbnM6IFRSVUUNCiAgICBjb2RlX2ZvbGRpbmc6IHNob3cNCiAgICBjb2RlX2Rvd25sb2FkOiBUUlVFDQotLS0NCg0KYGBge3Igc2V0dXAsIGluY2x1ZGU9RkFMU0V9DQprbml0cjo6b3B0c19jaHVuayRzZXQoZWNobyA9IFRSVUUpDQpgYGANCg0KYGBge3J9DQpjb24gPSBEQkk6OmRiQ29ubmVjdChSU1FMaXRlOjpTUUxpdGUoKSwgIi4uL2RhdGEvbWlkd2VzdF9haXJibmJfZXh0ZW5kZWQuZGIiKQ0KbGlzdGluZ3MgICAgID0gREJJOjpkYlJlYWRUYWJsZShjb24sICJsaXN0aW5ncyIpIHw+IHRpYmJsZTo6YXNfdGliYmxlKCkNCmF2YWlsYWJpbGl0eSA9IERCSTo6ZGJSZWFkVGFibGUoY29uLCAiYXZhaWxhYmlsaXR5X21vbnRobHkiKSB8PiB0aWJibGU6OmFzX3RpYmJsZSgpDQpyZXZpZXdzICAgICAgPSBEQkk6OmRiUmVhZFRhYmxlKGNvbiwgInJldmlld3NfbW9udGhseSIpIHw+IHRpYmJsZTo6YXNfdGliYmxlKCkNCkRCSTo6ZGJEaXNjb25uZWN0KGNvbikNCmBgYA0KDQpgYGB7cn0NCmRwbHlyOjpnbGltcHNlKGxpc3RpbmdzKQ0KYGBgDQoNCiMjIFRhc2sgMQ0KYGBge3J9DQojIGNvdW50IGxpc3RpbmdzIHBlciBob3N0X2lkIGFuZCBqb2luIHRvIGxpc3RpbmdzDQpob3N0X2NvdW50cyA9IGxpc3RpbmdzIHw+IA0KICBkcGx5cjo6Y291bnQoaG9zdF9pZCwgbmFtZSA9ICJsaXN0aW5nX2NvdW50IikNCg0KbGlzdGluZ3MgPSBsaXN0aW5ncyB8PiANCiAgZHBseXI6OmxlZnRfam9pbihob3N0X2NvdW50cywgYnkgPSAiaG9zdF9pZCIpDQoNCiMgcmVwb3J0IGhvdyBtYW55IGhvc3RzIGhhdmUgbW9yZSB0aGFuIDEwIGxpc3RpbmdzIGFuZCB3aGF0IHBlcmNlbnQgb2YgY2hpY2Fnb3MgbGlzdGluZ3MgdGhlc2UgaG9zdHMgaG9sZA0KbGlzdGluZ3MgfD4gDQogIGRwbHlyOjpmaWx0ZXIobGlzdGluZ19jb3VudCA+PSAxMCkgfD4gDQogIGRwbHlyOjpzdW1tYXJpc2UoDQogICAgaG9zdHNfMTBfcGx1cyA9IGRwbHlyOjpuX2Rpc3RpbmN0KGhvc3RfaWQpLA0KICAgIGNoaWNhZ29fcGVyY2VudCA9IHN1bShjaXR5ID09ICJDaGljYWdvIikgLw0KICAgICAgICAgICAgICAgICAgICAgIHN1bShsaXN0aW5ncyRjaXR5ID09ICJDaGljYWdvIikgKiAxMDANCiAgKQ0KDQpgYGANCg0KIyMgVGFzayAyDQpgYGB7cn0NCg0KYGBgDQoNCg0KDQoNCg0K</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIkFpcmJuYiBBbmFseXNpcyINCmRhdGU6ICIyMDI2LTA5LTI4Ig0Kb3V0cHV0OiANCiAgaHRtbF9kb2N1bWVudDoNCiAgICB0b2M6IFRSVUUNCiAgICB0b2NfZmxvYXQ6IFRSVUUNCiAgICBudW1iZXJfc2VjdGlvbnM6IFRSVUUNCiAgICBjb2RlX2ZvbGRpbmc6IHNob3cNCiAgICBjb2RlX2Rvd25sb2FkOiBUUlVFDQotLS0NCg0KYGBge3Igc2V0dXAsIGluY2x1ZGU9RkFMU0V9DQprbml0cjo6b3B0c19jaHVuayRzZXQoZWNobyA9IFRSVUUpDQpgYGANCg0KYGBge3J9DQpjb24gPSBEQkk6OmRiQ29ubmVjdChSU1FMaXRlOjpTUUxpdGUoKSwgIi4uL2RhdGEvbWlkd2VzdF9haXJibmJfZXh0ZW5kZWQuZGIiKQ0KbGlzdGluZ3MgICAgID0gREJJOjpkYlJlYWRUYWJsZShjb24sICJsaXN0aW5ncyIpIHw+IHRpYmJsZTo6YXNfdGliYmxlKCkNCmF2YWlsYWJpbGl0eSA9IERCSTo6ZGJSZWFkVGFibGUoY29uLCAiYXZhaWxhYmlsaXR5X21vbnRobHkiKSB8PiB0aWJibGU6OmFzX3RpYmJsZSgpDQpyZXZpZXdzICAgICAgPSBEQkk6OmRiUmVhZFRhYmxlKGNvbiwgInJldmlld3NfbW9udGhseSIpIHw+IHRpYmJsZTo6YXNfdGliYmxlKCkNCkRCSTo6ZGJEaXNjb25uZWN0KGNvbikNCmBgYA0KDQpgYGB7cn0NCmRwbHlyOjpnbGltcHNlKGxpc3RpbmdzKQ0KYGBgDQoNCiMjIFRhc2sgMQ0KYGBge3J9DQojIGNvdW50IGxpc3RpbmdzIHBlciBob3N0X2lkIGFuZCBqb2luIHRvIGxpc3RpbmdzDQpob3N0X2NvdW50cyA9IGxpc3RpbmdzIHw+IA0KICBkcGx5cjo6Y291bnQoaG9zdF9pZCwgbmFtZSA9ICJsaXN0aW5nX2NvdW50IikNCg0KbGlzdGluZ3MgPSBsaXN0aW5ncyB8PiANCiAgZHBseXI6OmxlZnRfam9pbihob3N0X2NvdW50cywgYnkgPSAiaG9zdF9pZCIpDQoNCiMgcmVwb3J0IGhvdyBtYW55IGhvc3RzIGhhdmUgbW9yZSB0aGFuIDEwIGxpc3RpbmdzIGFuZCB3aGF0IHBlcmNlbnQgb2YgY2hpY2Fnb3MgbGlzdGluZ3MgdGhlc2UgaG9zdHMgaG9sZA0KbGlzdGluZ3MgfD4gDQogIGRwbHlyOjpmaWx0ZXIobGlzdGluZ19jb3VudCA+PSAxMCkgfD4gDQogIGRwbHlyOjpzdW1tYXJpc2UoDQogICAgaG9zdHNfMTBfcGx1cyA9IGRwbHlyOjpuX2Rpc3RpbmN0KGhvc3RfaWQpLA0KICAgIGNoaWNhZ29fcGVyY2VudCA9IHN1bShjaXR5ID09ICJDaGljYWdvIikgLw0KICAgICAgICAgICAgICAgICAgICAgIHN1bShsaXN0aW5ncyRjaXR5ID09ICJDaGljYWdvIikgKiAxMDANCiAgKQ0KDQpgYGANCg0KIyMgVGFzayAyDQpgYGB7cn0NCiMga2VlcCBlbnRpcmUgaG9tZS9hcHQgdGhhdCBhY2NvbW1vZGF0ZXMgYXQgbGVhc3QgNCwgaGFzIGF0IGxlYXN0IDEwIHJldmlld3MsIGFuZCByZXZpZXdzIDQuOCBvciBiZXR0ZXINCmNvbHVtYnVzX3ZhbHVlID0gbGlzdGluZ3MgfD4gDQogIGRwbHlyOjpmaWx0ZXIoDQogICAgcm9vbV90eXBlID09ICJFbnRpcmUgaG9tZS9hcHQiLA0KICAgIGFjY29tbW9kYXRlcyA+PSA0LA0KICAgIG51bWJlcl9vZl9yZXZpZXdzID49IDEwLA0KICAgIHJldmlld19zY29yZXNfcmF0aW5nID49IDQuOA0KICApIHw+ICMgY2FsY3VsYXRlIHByaWNlIHBlciBwZXJzb24NCiAgZHBseXI6Om11dGF0ZSgNCiAgICBwcmljZV9wZXJfcGVyc29uID0gcHJpY2UgLyBhY2NvbW1vZGF0ZXMNCiAgKSB8PiAjIGdyb3VwIGJ5IGNpdHkgYW5kIG5laWdoYm91cmhvb2QgYW5kIGNhbGN1bGF0ZSBtZWRpYW4gcHJpY2UgcGVyIHBlcnNvbg0KICBkcGx5cjo6Z3JvdXBfYnkoY2l0eSwgbmVpZ2hib3VyaG9vZCkgfD4gDQogIGRwbHlyOjpzdW1tYXJpc2UoDQogICAgbWVkaWFuX3ByaWNlX3Blcl9wZXJzb24gPSBtZWRpYW4ocHJpY2VfcGVyX3BlcnNvbiwgbmEucm0gPSBUUlVFKSwNCiAgICBsaXN0aW5nX2NvdW50ID0gZHBseXI6Om4oKSwNCiAgICAuZ3JvdXBzID0gImRyb3AiDQogICkgfD4gIyBrZWVwIGNvbHVtYnVzIG5laWdoYm91cmhvb2RzIHdpdGggYXQgbGVhc3QgMjAgbGlzdGluZ3MNCiAgZHBseXI6OmZpbHRlcigNCiAgICBsaXN0aW5nX2NvdW50ID49IDIwLA0KICAgIGNpdHkgPT0gIkNvbHVtYnVzIg0KICApIHw+IA0KICBkcGx5cjo6YXJyYW5nZShtZWRpYW5fcHJpY2VfcGVyX3BlcnNvbikNCg0KY29sdW1idXNfdmFsdWUNCg0KYGBgDQojIyBUYXNrIDMNCmBgYHtyfQ0KIyBjYWxjdWxhdGUgbWVkaWFuIHByaWNlLCByZXZpZXdzIHBlciBtb250aCwgYW5kIGVzdGltYXRlZCByZXZlbnVlIG92ZXIgdGhlIGxhc3QgeWVhciBieSBjaXR5IGFuZCByb29tIHR5cGUNCmVhcm5pbmdzID0gbGlzdGluZ3MgfD4gDQogIGRwbHlyOjpncm91cF9ieShjaXR5LCByb29tX3R5cGUpIHw+IA0KICBkcGx5cjo6c3VtbWFyaXNlKA0KICAgIGRwbHlyOjphY3Jvc3MoDQogICAgICBjKHByaWNlLCByZXZpZXdzX3Blcl9tb250aCwgZXN0aW1hdGVkX3JldmVudWVfbDM2NWQpLA0KICAgICAgfiBtZWRpYW4oLngsIG5hLnJtID0gVFJVRSkNCiAgICApLA0KICAgIC5ncm91cHMgPSAiZHJvcCINCiAgKQ0KDQojIGNhbGN1bGF0ZSBtZWRpYW4gZXN0aW1hdGVkIHJldmVudWUgb2YgVHdpbiBDaXRpZXMgZW50aXJlIGhvbWVzDQplYXJuaW5ncyB8PiANCiAgZHBseXI6OmZpbHRlcigNCiAgICBjaXR5ID09ICJUd2luIENpdGllcyIsDQogICAgcm9vbV90eXBlID09ICJFbnRpcmUgaG9tZS9hcHQiDQogICkNCmBgYA0KIyMgVGFzayA0DQpgYGB7cn0NCiMgV2l0aGluIGVhY2ggY2l0eSwgc29ydCBsaXN0aW5ncyBieSBlc3RpbWF0ZWQgcmV2ZW51ZSBpbiB0aGUgbGFzdCB5ZWFyIGFuZCBtYXJrIHRoZSB0b3AgMTAlDQpjb25jZW50cmF0aW9uID0gbGlzdGluZ3MgfD4gDQogIGRwbHlyOjpncm91cF9ieShjaXR5KSB8PiANCiAgZHBseXI6OmFycmFuZ2UoZHBseXI6OmRlc2MoZXN0aW1hdGVkX3JldmVudWVfbDM2NWQpLCAuYnlfZ3JvdXAgPSBUUlVFKSB8PiANCiAgZHBseXI6Om11dGF0ZSgNCiAgICB0b3BfMTAgPSBkcGx5cjo6cm93X251bWJlcigpIDw9IGNlaWxpbmcoMC4xMCAqIGRwbHlyOjpuKCkpDQogICkgfD4gDQogIGRwbHlyOjpzdW1tYXJpc2UoDQogICAgdG9wXzEwX3JldmVudWUgPSBzdW0oDQogICAgICBlc3RpbWF0ZWRfcmV2ZW51ZV9sMzY1ZFt0b3BfMTBdLA0KICAgICAgbmEucm0gPSBUUlVFDQogICAgKSwgIyBhbHNvIGNhbGN1bGF0ZSB0b3RhbCByZXZlbnVlIHRvIGNvbXBhcmUgYWdhaW5zdCB0b3AgMTAlDQogICAgdG90YWxfcmV2ZW51ZSA9IHN1bSgNCiAgICAgIGVzdGltYXRlZF9yZXZlbnVlX2wzNjVkLA0KICAgICAgbmEucm0gPSBUUlVFDQogICAgKSwNCiAgICBwZXJjZW50X3JldmVudWUgPSB0b3BfMTBfcmV2ZW51ZSAvIHRvdGFsX3JldmVudWUgKiAxMDAsDQogICAgLmdyb3VwcyA9ICJkcm9wIg0KICApDQoNCiMgQ29sdW1idXMnIHRvdGFsIGVzdGltYXRlZCByZXZlbnVlIGJ5IHRvcCAxMCUNCmNvbmNlbnRyYXRpb24gfD4gDQogIGRwbHlyOjpmaWx0ZXIoY2l0eSA9PSAiQ29sdW1idXMiKQ0KYGBgDQojIyBUYXNrIDUNCmBgYHtyfQ0KIyBqb2luIHRoZSBvY3RvYmVyIDIwMjYgcm93cyBvZiBhdmFpbGFiaWxpdHkgdG8gdGhlIGVudGlyZSBob21lcyBsaXN0aW5ncw0KeWVhcl9haGVhZCA9IGF2YWlsYWJpbGl0eSB8PiANCiAgZHBseXI6OmZpbHRlcihtb250aCA9PSAiMjAyNi0xMCIpIHw+IA0KICBkcGx5cjo6aW5uZXJfam9pbigNCiAgICBsaXN0aW5ncywNCiAgICBieSA9ICJpZCINCiAgKSB8PiANCiAgZHBseXI6OmZpbHRlcihyb29tX3R5cGUgPT0gIkVudGlyZSBob21lL2FwdCIpIHw+ICMgZm9ybXVsYSBmb3IgbW9zdGx5IHRha2VuDQogIGRwbHlyOjptdXRhdGUoDQogICAgbW9zdGx5X3Rha2VuID0gbmlnaHRzX2F2YWlsYWJsZSA8IDAuNSAqIG5pZ2h0c19pbl9tb250aA0KICApIHw+ICMgcmVwb3J0IHRoZSBjaXR5IHdpdGggdGhlIGxvd2VzdCBzaGFyZSBvZiBtb3N0bHkgdGFrZW4NCiAgZHBseXI6Omdyb3VwX2J5KGNpdHkpIHw+IA0KICBkcGx5cjo6c3VtbWFyaXNlKA0KICAgIHNoYXJlX21vc3RseV90YWtlbiA9IG1lYW4obW9zdGx5X3Rha2VuLCBuYS5ybSA9IFRSVUUpLA0KICAgIC5ncm91cHMgPSAiZHJvcCINCiAgKSB8PiANCiAgZHBseXI6OmFycmFuZ2Uoc2hhcmVfbW9zdGx5X3Rha2VuKQ0KDQp5ZWFyX2FoZWFkDQpgYGANCiMjIFRhc2sgNg0KYGBge3J9DQojIGpvaW4gcmV2aWV3cyB0byBsaXN0aW5ncywga2VlcCBqdWx5IDIwMjUgdGhyb3VnaCBqdW5lIDIwMjYNCmRlbWFuZCA9IHJldmlld3MgfD4gDQogIGRwbHlyOjppbm5lcl9qb2luKA0KICAgIGxpc3RpbmdzLA0KICAgIGJ5ID0gImlkIg0KICApIHw+IA0KICBkcGx5cjo6ZmlsdGVyKA0KICAgIG1vbnRoID49ICIyMDI1LTA3IiwNCiAgICBtb250aCA8PSAiMjAyNi0wNiINCiAgKSB8PiAjIHRvdGFsIHRoZSByZXZpZXdzIHBlciBjaXR5IGFuZCBtb250aA0KICBkcGx5cjo6Z3JvdXBfYnkoY2l0eSwgbW9udGgpIHw+IA0KICBkcGx5cjo6c3VtbWFyaXNlKA0KICAgIHRvdGFsX3Jldmlld3MgPSBkcGx5cjo6bigpLA0KICAgIC5ncm91cHMgPSAiZHJvcCINCiAgKQ0KDQojIHJlcG9ydCB0aGUgdHdpbiBjaXRpZXMgYnVzaWVzdCBtb250aCBhbmQgdGhlIHJhdGlvIG9mIGl0cyBidXNpZXN0IHRvIHF1aWV0ZXN0IG1vbnRoDQpkZW1hbmQgfD4gDQogIGRwbHlyOjpmaWx0ZXIoY2l0eSA9PSAiVHdpbiBDaXRpZXMiKSB8PiANCiAgZHBseXI6OnN1bW1hcmlzZSgNCiAgICBidXNpZXN0X21vbnRoID0gbW9udGhbd2hpY2gubWF4KHRvdGFsX3Jldmlld3MpXSwNCiAgICBidXNpZXN0X3Jldmlld3MgPSBtYXgodG90YWxfcmV2aWV3cyksDQogICAgcXVpZXRlc3RfcmV2aWV3cyA9IG1pbih0b3RhbF9yZXZpZXdzKSwNCiAgICByYXRpbyA9IG1heCh0b3RhbF9yZXZpZXdzKSAvIG1pbih0b3RhbF9yZXZpZXdzKQ0KICApDQpgYGANCg0KIyMgVGFzayA3DQpgYGB7cn0NCiMgY3JlYXRlIG5ldyB2YXJpYWJsZSB0aGF0IGxhYmVscyBob3N0cyBhcyBzdXBlcmhvc3Qgb3Igb3RoZXIgaG9zdA0Kc3VwZXJob3N0X3ByZW1pdW0gPSBsaXN0aW5ncyB8PiANCiAgZHBseXI6OmZpbHRlcigNCiAgICByb29tX3R5cGUgPT0gIkVudGlyZSBob21lL2FwdCIsDQogICAgaG9zdF9pc19zdXBlcmhvc3QgJWluJSBjKCJ0IiwgImYiKQ0KICApIHw+IA0KICBkcGx5cjo6bXV0YXRlKA0KICAgIGhvc3RfdHlwZSA9IGRwbHlyOjppZl9lbHNlKA0KICAgICAgaG9zdF9pc19zdXBlcmhvc3QgPT0gInQiLA0KICAgICAgIlN1cGVyaG9zdCIsDQogICAgICAiT3RoZXIgaG9zdCINCiAgICApDQogICkgfD4gIyBjYWxjdWxhdGUgbWVkaWFuIHByaWNlIGFuZCByYXRpbmcgZm9yIGVhY2ggZ3JvdXAgYnkgY2l0eQ0KICBkcGx5cjo6Z3JvdXBfYnkoY2l0eSwgaG9zdF90eXBlKSB8PiANCiAgZHBseXI6OnN1bW1hcmlzZSgNCiAgICBtZWRpYW5fcHJpY2UgPSBtZWRpYW4ocHJpY2UsIG5hLnJtID0gVFJVRSksDQogICAgbWVkaWFuX3JhdGluZyA9IG1lZGlhbihyZXZpZXdfc2NvcmVzX3JhdGluZywgbmEucm0gPSBUUlVFKSwNCiAgICAuZ3JvdXBzID0gImRyb3AiDQogICkgfD4gDQogIGRwbHlyOjpncm91cF9ieShjaXR5KSB8PiANCiAgZHBseXI6OnN1bW1hcmlzZSgNCiAgICBzdXBlcmhvc3RfbWVkaWFuX3ByaWNlID0gbWVkaWFuX3ByaWNlW2hvc3RfdHlwZSA9PSAiU3VwZXJob3N0Il0sDQogICAgb3RoZXJfaG9zdF9tZWRpYW5fcHJpY2UgPSBtZWRpYW5fcHJpY2VbaG9zdF90eXBlID09ICJPdGhlciBob3N0Il0sDQogICAgcHJlbWl1bSA9IHN1cGVyaG9zdF9tZWRpYW5fcHJpY2UgLSBvdGhlcl9ob3N0X21lZGlhbl9wcmljZSwNCiAgICAuZ3JvdXBzID0gImRyb3AiDQogICkNCg0Kc3VwZXJob3N0X3ByZW1pdW0NCmBgYA0KIyMgVGFzayA4DQpgYGB7cn0NCiMgY2FsY3VsYXRlIHRoZSBsaXN0aW5ncyB0aGF0IGhhdmUgbm8gcm93cyBpbiBhdmFpbGFiaWxpdHkgYnkgY2l0eQ0KbGlzdGluZ3MgfD4gDQogIGRwbHlyOjphbnRpX2pvaW4oYXZhaWxhYmlsaXR5LCBieSA9ICJpZCIpIHw+IA0KICBkcGx5cjo6Z3JvdXBfYnkoY2l0eSkgfD4gDQogIGRwbHlyOjpzdW1tYXJpc2UoDQogICAgbGlzdGluZ3Nfd2l0aG91dF9hdmFpbGFiaWxpdHkgPSBkcGx5cjo6bigpLA0KICAgIC5ncm91cHMgPSAiZHJvcCINCiAgKQ0KYGBgDQojIyBUYXNrIEIyDQpgYGB7cn0NCiMgY29tcHV0ZSB0aGUgdGFzayAxIHNoYXJlIGZvciBhbGwgY2l0aWVzDQp0YXNrMV9zaGFyZSA9IGxpc3RpbmdzIHw+IA0KICBkcGx5cjo6Z3JvdXBfYnkoY2l0eSkgfD4gDQogIGRwbHlyOjpzdW1tYXJpc2UoDQogICAgdGFzazFfc2hhcmUgPSBtZWFuKGxpc3RpbmdfY291bnQgPj0gMTApICogMTAwLA0KICAgIC5ncm91cHMgPSAiZHJvcCINCiAgKQ0KDQojIGNvbXB1dGUgdGhlIHRhc2sgNCBzaGFyZSBmb3IgYWxsIGNpdGllcw0KdGFzazRfc2hhcmUgPSBsaXN0aW5ncyB8PiANCiAgZHBseXI6Omdyb3VwX2J5KGNpdHkpIHw+IA0KICBkcGx5cjo6YXJyYW5nZShkcGx5cjo6ZGVzYyhlc3RpbWF0ZWRfcmV2ZW51ZV9sMzY1ZCksIC5ieV9ncm91cCA9IFRSVUUpIHw+IA0KICBkcGx5cjo6bXV0YXRlKA0KICAgIHRvcF8xMCA9IGRwbHlyOjpyb3dfbnVtYmVyKCkgPD0gY2VpbGluZygwLjEwICogZHBseXI6Om4oKSkNCiAgKSB8PiANCiAgZHBseXI6OnN1bW1hcmlzZSgNCiAgICB0YXNrNF9zaGFyZSA9IHN1bSgNCiAgICAgIGVzdGltYXRlZF9yZXZlbnVlX2wzNjVkW3RvcF8xMF0sDQogICAgICBuYS5ybSA9IFRSVUUNCiAgICApIC8NCiAgICAgIHN1bShlc3RpbWF0ZWRfcmV2ZW51ZV9sMzY1ZCwgbmEucm0gPSBUUlVFKSAqIDEwMCwNCiAgICAuZ3JvdXBzID0gImRyb3AiDQogICkNCg0KIyBjb21iaW5lIHRoZSB0d28gcmVzdWx0cw0Kc2hhcmVzID0gdGFzazFfc2hhcmUgfD4gDQogIGRwbHlyOjpsZWZ0X2pvaW4odGFzazRfc2hhcmUsIGJ5ID0gImNpdHkiKQ0KDQpzaGFyZXMNCmBgYA0KDQo=</div>
 
 
 </div>

@@ -48,10 +48,201 @@ listings |>
 
 ## Task 2
 ```{r}
+# keep entire home/apt that accommodates at least 4, has at least 10 reviews, and reviews 4.8 or better
+columbus_value = listings |> 
+  dplyr::filter(
+    room_type == "Entire home/apt",
+    accommodates >= 4,
+    number_of_reviews >= 10,
+    review_scores_rating >= 4.8
+  ) |> # calculate price per person
+  dplyr::mutate(
+    price_per_person = price / accommodates
+  ) |> # group by city and neighbourhood and calculate median price per person
+  dplyr::group_by(city, neighbourhood) |> 
+  dplyr::summarise(
+    median_price_per_person = median(price_per_person, na.rm = TRUE),
+    listing_count = dplyr::n(),
+    .groups = "drop"
+  ) |> # keep columbus neighbourhoods with at least 20 listings
+  dplyr::filter(
+    listing_count >= 20,
+    city == "Columbus"
+  ) |> 
+  dplyr::arrange(median_price_per_person)
+
+columbus_value
 
 ```
+## Task 3
+```{r}
+# calculate median price, reviews per month, and estimated revenue over the last year by city and room type
+earnings = listings |> 
+  dplyr::group_by(city, room_type) |> 
+  dplyr::summarise(
+    dplyr::across(
+      c(price, reviews_per_month, estimated_revenue_l365d),
+      ~ median(.x, na.rm = TRUE)
+    ),
+    .groups = "drop"
+  )
 
+# calculate median estimated revenue of Twin Cities entire homes
+earnings |> 
+  dplyr::filter(
+    city == "Twin Cities",
+    room_type == "Entire home/apt"
+  )
+```
+## Task 4
+```{r}
+# Within each city, sort listings by estimated revenue in the last year and mark the top 10%
+concentration = listings |> 
+  dplyr::group_by(city) |> 
+  dplyr::arrange(dplyr::desc(estimated_revenue_l365d), .by_group = TRUE) |> 
+  dplyr::mutate(
+    top_10 = dplyr::row_number() <= ceiling(0.10 * dplyr::n())
+  ) |> 
+  dplyr::summarise(
+    top_10_revenue = sum(
+      estimated_revenue_l365d[top_10],
+      na.rm = TRUE
+    ), # also calculate total revenue to compare against top 10%
+    total_revenue = sum(
+      estimated_revenue_l365d,
+      na.rm = TRUE
+    ),
+    percent_revenue = top_10_revenue / total_revenue * 100,
+    .groups = "drop"
+  )
 
+# Columbus' total estimated revenue by top 10%
+concentration |> 
+  dplyr::filter(city == "Columbus")
+```
+## Task 5
+```{r}
+# join the october 2026 rows of availability to the entire homes listings
+year_ahead = availability |> 
+  dplyr::filter(month == "2026-10") |> 
+  dplyr::inner_join(
+    listings,
+    by = "id"
+  ) |> 
+  dplyr::filter(room_type == "Entire home/apt") |> # formula for mostly taken
+  dplyr::mutate(
+    mostly_taken = nights_available < 0.5 * nights_in_month
+  ) |> # report the city with the lowest share of mostly taken
+  dplyr::group_by(city) |> 
+  dplyr::summarise(
+    share_mostly_taken = mean(mostly_taken, na.rm = TRUE),
+    .groups = "drop"
+  ) |> 
+  dplyr::arrange(share_mostly_taken)
 
+year_ahead
+```
+## Task 6
+```{r}
+# join reviews to listings, keep july 2025 through june 2026
+demand = reviews |> 
+  dplyr::inner_join(
+    listings,
+    by = "id"
+  ) |> 
+  dplyr::filter(
+    month >= "2025-07",
+    month <= "2026-06"
+  ) |> # total the reviews per city and month
+  dplyr::group_by(city, month) |> 
+  dplyr::summarise(
+    total_reviews = dplyr::n(),
+    .groups = "drop"
+  )
 
+# report the twin cities busiest month and the ratio of its busiest to quietest month
+demand |> 
+  dplyr::filter(city == "Twin Cities") |> 
+  dplyr::summarise(
+    busiest_month = month[which.max(total_reviews)],
+    busiest_reviews = max(total_reviews),
+    quietest_reviews = min(total_reviews),
+    ratio = max(total_reviews) / min(total_reviews)
+  )
+```
+
+## Task 7
+```{r}
+# create new variable that labels hosts as superhost or other host
+superhost_premium = listings |> 
+  dplyr::filter(
+    room_type == "Entire home/apt",
+    host_is_superhost %in% c("t", "f")
+  ) |> 
+  dplyr::mutate(
+    host_type = dplyr::if_else(
+      host_is_superhost == "t",
+      "Superhost",
+      "Other host"
+    )
+  ) |> # calculate median price and rating for each group by city
+  dplyr::group_by(city, host_type) |> 
+  dplyr::summarise(
+    median_price = median(price, na.rm = TRUE),
+    median_rating = median(review_scores_rating, na.rm = TRUE),
+    .groups = "drop"
+  ) |> 
+  dplyr::group_by(city) |> 
+  dplyr::summarise(
+    superhost_median_price = median_price[host_type == "Superhost"],
+    other_host_median_price = median_price[host_type == "Other host"],
+    premium = superhost_median_price - other_host_median_price,
+    .groups = "drop"
+  )
+
+superhost_premium
+```
+## Task 8
+```{r}
+# calculate the listings that have no rows in availability by city
+listings |> 
+  dplyr::anti_join(availability, by = "id") |> 
+  dplyr::group_by(city) |> 
+  dplyr::summarise(
+    listings_without_availability = dplyr::n(),
+    .groups = "drop"
+  )
+```
+## Task B2
+```{r}
+# compute the task 1 share for all cities
+task1_share = listings |> 
+  dplyr::group_by(city) |> 
+  dplyr::summarise(
+    task1_share = mean(listing_count >= 10) * 100,
+    .groups = "drop"
+  )
+
+# compute the task 4 share for all cities
+task4_share = listings |> 
+  dplyr::group_by(city) |> 
+  dplyr::arrange(dplyr::desc(estimated_revenue_l365d), .by_group = TRUE) |> 
+  dplyr::mutate(
+    top_10 = dplyr::row_number() <= ceiling(0.10 * dplyr::n())
+  ) |> 
+  dplyr::summarise(
+    task4_share = sum(
+      estimated_revenue_l365d[top_10],
+      na.rm = TRUE
+    ) /
+      sum(estimated_revenue_l365d, na.rm = TRUE) * 100,
+    .groups = "drop"
+  )
+
+# combine the two results
+shares = task1_share |> 
+  dplyr::left_join(task4_share, by = "city")
+
+shares
+```
 
