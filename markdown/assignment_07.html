@@ -1594,50 +1594,85 @@ border-radius: 0px;
 </div>
 
 
-<div id="scraping-the-fsb-academic-departments" class="section level2" number="1">
+<div id="scraping-the-fsb-directory" class="section level2" number="1">
 <h2><span class="header-section-number">1</span> Scraping the FSB
-academic departments</h2>
-<pre class="r"><code>dept_url = &quot;https://miamioh.edu/fsb/directory/?up=/query/all/all/Accountancy/all&quot;
+Directory</h2>
+<pre class="r"><code># List of FSB departments
+# the URL for Information Systems &amp; Analytics uses %20 for spaces
+dept = c(&#39;Accountancy&#39;, &#39;Economics&#39;, &#39;Entrepreneurship&#39;, &#39;Finance&#39;, 
+         &#39;Information%20Systems%20--%20Analytics&#39;, &#39;Marketing&#39;, &#39;Management&#39;)
 
-page = rvest::read_html(dept_url)</code></pre>
-<pre class="r"><code># get all the table rows
-rows = rvest::html_elements(page, &quot;tr&quot;)
+# create an empty data frame
+courses_df = data.frame()
 
-# create empty lists
-department = c()
-name = c()
-position = c()
-website = c()
-
-# extract the 4 pieces from every row
-for (row in rows[2:length(rows)]) {
+# loop through each department
+for (dept_name in dept) {
   
-  department = c(department,
-                 rvest::html_element(row, &quot;td:nth-child(1)&quot;) |&gt;
-                   rvest::html_text2())
+  # create the URL for the current department
+  dept_url = paste0(&quot;https://miamioh.edu/fsb/directory/?up=/query/all/all/&quot;, 
+                    dept_name, &quot;/all&quot;)
   
-  name = c(name,
-           rvest::html_element(row, &quot;td:nth-child(3) strong a&quot;) |&gt;
-             rvest::html_text2())
+  # read the department webpage
+  webpage = rvest::read_html(dept_url)
   
-  position = c(position,
-               rvest::html_element(row, &quot;td:nth-child(3) i&quot;) |&gt;
-                 rvest::html_text2())
+  # find all table rows on the webpage
+  rows = rvest::html_elements(webpage, &quot;tr&quot;)
   
-  website = c(website,
-              rvest::html_element(row, &quot;td:nth-child(3) a&quot;) |&gt;
-                rvest::html_attr(&quot;href&quot;))
+  # get the department name from the first faculty row
+  department_name = rvest::html_element(rows[2], &quot;td:nth-child(1)&quot;) |&gt;
+    rvest::html_text2() |&gt;
+    trimws()
+  
+  # create empty lists
+  department = c()
+  name = c()
+  position = c()
+  website = c()
+  
+  # loop through the faculty rows skipping the header
+  for (row in rows[2:length(rows)]) {
+    
+    # extract the department
+    department = c(department,
+                   rvest::html_element(row, &quot;td:nth-child(1)&quot;) |&gt;
+                     rvest::html_text2() |&gt;
+                     trimws())
+    
+    # extract the name
+    name = c(name,
+             rvest::html_element(row, &quot;td:nth-child(3) strong a&quot;) |&gt;
+               rvest::html_text() |&gt;
+               trimws())
+    
+    # extract the position
+    position = c(position,
+                 rvest::html_element(row, &quot;td:nth-child(3) i&quot;) |&gt;
+                   rvest::html_text2() |&gt;
+                   trimws())
+    
+    # extract the website
+    website = c(website,
+                rvest::html_element(row, &quot;td:nth-child(3) a&quot;) |&gt;
+                  rvest::html_attr(&quot;href&quot;))
+  }
+  
+  # combine into the data frame
+  df = data.frame(
+    department = department,
+    name = name,
+    position = position,
+    website = website
+  )
+  
+  # keep only rows belonging to the current department
+  # some department pages contain entries from other departments
+  df = df[df$department == department_name, ]
+  
+  # add this department&#39;s data to the overall data frame
+  courses_df = rbind(courses_df, df)
 }
 
-# put those lists into a dataframe
-accountancy_df = data.frame(
-  department,
-  name,
-  position,
-  website
-)
-
-head(accountancy_df)</code></pre>
+head(courses_df)</code></pre>
 <pre><code>##    department                  name
 ## 1 Accountancy   Brian Ballou, Ph.D.
 ## 2 Accountancy  William Brink, Ph.D.
@@ -1647,11 +1682,11 @@ head(accountancy_df)</code></pre>
 ## 6 Accountancy  Timothy Eaton, Ph.D.
 ##                                                                                                                                           position
 ## 1 EY Professor of Accounting, William Isaac and\nMichael Oxley Center for Business Leadership Co-Founder, Miami MBA Faculty Director and Professor
-## 2                                                                                                                                      Professor\n
-## 3                                                                                                                            Associate Professor\n
-## 4                                                                                                                            Associate Professor\n
-## 5                                                                                                                   Assistant Teaching Professor\n
-## 6                                                                                                   Arthur Andersen Alumni Professor &amp; Professor\n
+## 2                                                                                                                                        Professor
+## 3                                                                                                                              Associate Professor
+## 4                                                                                                                              Associate Professor
+## 5                                                                                                                     Assistant Teaching Professor
+## 6                                                                                                     Arthur Andersen Alumni Professor &amp; Professor
 ##                                         website
 ## 1 http://www.fsb.miamioh.edu/directory/balloubj
 ## 2  http://www.fsb.miamioh.edu/directory/brinkwd
@@ -1661,7 +1696,7 @@ head(accountancy_df)</code></pre>
 ## 6   http://www.fsb.miamioh.edu/directory/eatont</code></pre>
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIkFzc2lnbm1lbnQgMDciDQphdXRob3I6ICJBcnRpZSBQYXBhbmRyZWEiDQpkYXRlOiAiMjAyNi0xMC0wNSINCm91dHB1dDogDQogIGh0bWxfZG9jdW1lbnQ6DQogICAgdG9jOiBUUlVFDQogICAgdG9jX2Zsb2F0OiBUUlVFDQogICAgbnVtYmVyX3NlY3Rpb25zOiBUUlVFDQogICAgY29kZV9mb2xkaW5nOiBzaG93DQogICAgY29kZV9kb3dubG9hZDogVFJVRQ0KLS0tDQoNCmBgYHtyIHNldHVwLCBpbmNsdWRlPUZBTFNFfQ0Ka25pdHI6Om9wdHNfY2h1bmskc2V0KGVjaG8gPSBUUlVFKQ0KYGBgDQoNCiMjIFNjcmFwaW5nIHRoZSBGU0IgYWNhZGVtaWMgZGVwYXJ0bWVudHMNCmBgYHtyfQ0KZGVwdF91cmwgPSAiaHR0cHM6Ly9taWFtaW9oLmVkdS9mc2IvZGlyZWN0b3J5Lz91cD0vcXVlcnkvYWxsL2FsbC9BY2NvdW50YW5jeS9hbGwiDQoNCnBhZ2UgPSBydmVzdDo6cmVhZF9odG1sKGRlcHRfdXJsKQ0KYGBgDQoNCmBgYHtyfQ0KIyBnZXQgYWxsIHRoZSB0YWJsZSByb3dzDQpyb3dzID0gcnZlc3Q6Omh0bWxfZWxlbWVudHMocGFnZSwgInRyIikNCg0KIyBjcmVhdGUgZW1wdHkgbGlzdHMNCmRlcGFydG1lbnQgPSBjKCkNCm5hbWUgPSBjKCkNCnBvc2l0aW9uID0gYygpDQp3ZWJzaXRlID0gYygpDQoNCiMgZXh0cmFjdCB0aGUgNCBwaWVjZXMgZnJvbSBldmVyeSByb3cNCmZvciAocm93IGluIHJvd3NbMjpsZW5ndGgocm93cyldKSB7DQogIA0KICBkZXBhcnRtZW50ID0gYyhkZXBhcnRtZW50LA0KICAgICAgICAgICAgICAgICBydmVzdDo6aHRtbF9lbGVtZW50KHJvdywgInRkOm50aC1jaGlsZCgxKSIpIHw+DQogICAgICAgICAgICAgICAgICAgcnZlc3Q6Omh0bWxfdGV4dDIoKSkNCiAgDQogIG5hbWUgPSBjKG5hbWUsDQogICAgICAgICAgIHJ2ZXN0OjpodG1sX2VsZW1lbnQocm93LCAidGQ6bnRoLWNoaWxkKDMpIHN0cm9uZyBhIikgfD4NCiAgICAgICAgICAgICBydmVzdDo6aHRtbF90ZXh0MigpKQ0KICANCiAgcG9zaXRpb24gPSBjKHBvc2l0aW9uLA0KICAgICAgICAgICAgICAgcnZlc3Q6Omh0bWxfZWxlbWVudChyb3csICJ0ZDpudGgtY2hpbGQoMykgaSIpIHw+DQogICAgICAgICAgICAgICAgIHJ2ZXN0OjpodG1sX3RleHQyKCkpDQogIA0KICB3ZWJzaXRlID0gYyh3ZWJzaXRlLA0KICAgICAgICAgICAgICBydmVzdDo6aHRtbF9lbGVtZW50KHJvdywgInRkOm50aC1jaGlsZCgzKSBhIikgfD4NCiAgICAgICAgICAgICAgICBydmVzdDo6aHRtbF9hdHRyKCJocmVmIikpDQp9DQoNCiMgcHV0IHRob3NlIGxpc3RzIGludG8gYSBkYXRhZnJhbWUNCmFjY291bnRhbmN5X2RmID0gZGF0YS5mcmFtZSgNCiAgZGVwYXJ0bWVudCwNCiAgbmFtZSwNCiAgcG9zaXRpb24sDQogIHdlYnNpdGUNCikNCg0KaGVhZChhY2NvdW50YW5jeV9kZikNCmBgYA0KDQoNCg0KDQoNCg0K</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIkFzc2lnbm1lbnQgMDciDQphdXRob3I6ICJBcnRpZSBQYXBhbmRyZWEiDQpkYXRlOiAiMjAyNi0xMC0wNSINCm91dHB1dDogDQogIGh0bWxfZG9jdW1lbnQ6DQogICAgdG9jOiBUUlVFDQogICAgdG9jX2Zsb2F0OiBUUlVFDQogICAgbnVtYmVyX3NlY3Rpb25zOiBUUlVFDQogICAgY29kZV9mb2xkaW5nOiBzaG93DQogICAgY29kZV9kb3dubG9hZDogVFJVRQ0KLS0tDQoNCmBgYHtyIHNldHVwLCBpbmNsdWRlPUZBTFNFfQ0Ka25pdHI6Om9wdHNfY2h1bmskc2V0KGVjaG8gPSBUUlVFKQ0KYGBgDQoNCiMjIFNjcmFwaW5nIHRoZSBGU0IgRGlyZWN0b3J5DQpgYGB7cn0NCiMgTGlzdCBvZiBGU0IgZGVwYXJ0bWVudHMNCiMgdGhlIFVSTCBmb3IgSW5mb3JtYXRpb24gU3lzdGVtcyAmIEFuYWx5dGljcyB1c2VzICUyMCBmb3Igc3BhY2VzDQpkZXB0ID0gYygnQWNjb3VudGFuY3knLCAnRWNvbm9taWNzJywgJ0VudHJlcHJlbmV1cnNoaXAnLCAnRmluYW5jZScsIA0KICAgICAgICAgJ0luZm9ybWF0aW9uJTIwU3lzdGVtcyUyMC0tJTIwQW5hbHl0aWNzJywgJ01hcmtldGluZycsICdNYW5hZ2VtZW50JykNCg0KIyBjcmVhdGUgYW4gZW1wdHkgZGF0YSBmcmFtZQ0KY291cnNlc19kZiA9IGRhdGEuZnJhbWUoKQ0KDQojIGxvb3AgdGhyb3VnaCBlYWNoIGRlcGFydG1lbnQNCmZvciAoZGVwdF9uYW1lIGluIGRlcHQpIHsNCiAgDQogICMgY3JlYXRlIHRoZSBVUkwgZm9yIHRoZSBjdXJyZW50IGRlcGFydG1lbnQNCiAgZGVwdF91cmwgPSBwYXN0ZTAoImh0dHBzOi8vbWlhbWlvaC5lZHUvZnNiL2RpcmVjdG9yeS8/dXA9L3F1ZXJ5L2FsbC9hbGwvIiwgDQogICAgICAgICAgICAgICAgICAgIGRlcHRfbmFtZSwgIi9hbGwiKQ0KICANCiAgIyByZWFkIHRoZSBkZXBhcnRtZW50IHdlYnBhZ2UNCiAgd2VicGFnZSA9IHJ2ZXN0OjpyZWFkX2h0bWwoZGVwdF91cmwpDQogIA0KICAjIGZpbmQgYWxsIHRhYmxlIHJvd3Mgb24gdGhlIHdlYnBhZ2UNCiAgcm93cyA9IHJ2ZXN0OjpodG1sX2VsZW1lbnRzKHdlYnBhZ2UsICJ0ciIpDQogIA0KICAjIGdldCB0aGUgZGVwYXJ0bWVudCBuYW1lIGZyb20gdGhlIGZpcnN0IGZhY3VsdHkgcm93DQogIGRlcGFydG1lbnRfbmFtZSA9IHJ2ZXN0OjpodG1sX2VsZW1lbnQocm93c1syXSwgInRkOm50aC1jaGlsZCgxKSIpIHw+DQogICAgcnZlc3Q6Omh0bWxfdGV4dDIoKSB8Pg0KICAgIHRyaW13cygpDQogIA0KICAjIGNyZWF0ZSBlbXB0eSBsaXN0cw0KICBkZXBhcnRtZW50ID0gYygpDQogIG5hbWUgPSBjKCkNCiAgcG9zaXRpb24gPSBjKCkNCiAgd2Vic2l0ZSA9IGMoKQ0KICANCiAgIyBsb29wIHRocm91Z2ggdGhlIGZhY3VsdHkgcm93cyBza2lwcGluZyB0aGUgaGVhZGVyDQogIGZvciAocm93IGluIHJvd3NbMjpsZW5ndGgocm93cyldKSB7DQogICAgDQogICAgIyBleHRyYWN0IHRoZSBkZXBhcnRtZW50DQogICAgZGVwYXJ0bWVudCA9IGMoZGVwYXJ0bWVudCwNCiAgICAgICAgICAgICAgICAgICBydmVzdDo6aHRtbF9lbGVtZW50KHJvdywgInRkOm50aC1jaGlsZCgxKSIpIHw+DQogICAgICAgICAgICAgICAgICAgICBydmVzdDo6aHRtbF90ZXh0MigpIHw+DQogICAgICAgICAgICAgICAgICAgICB0cmltd3MoKSkNCiAgICANCiAgICAjIGV4dHJhY3QgdGhlIG5hbWUNCiAgICBuYW1lID0gYyhuYW1lLA0KICAgICAgICAgICAgIHJ2ZXN0OjpodG1sX2VsZW1lbnQocm93LCAidGQ6bnRoLWNoaWxkKDMpIHN0cm9uZyBhIikgfD4NCiAgICAgICAgICAgICAgIHJ2ZXN0OjpodG1sX3RleHQoKSB8Pg0KICAgICAgICAgICAgICAgdHJpbXdzKCkpDQogICAgDQogICAgIyBleHRyYWN0IHRoZSBwb3NpdGlvbg0KICAgIHBvc2l0aW9uID0gYyhwb3NpdGlvbiwNCiAgICAgICAgICAgICAgICAgcnZlc3Q6Omh0bWxfZWxlbWVudChyb3csICJ0ZDpudGgtY2hpbGQoMykgaSIpIHw+DQogICAgICAgICAgICAgICAgICAgcnZlc3Q6Omh0bWxfdGV4dDIoKSB8Pg0KICAgICAgICAgICAgICAgICAgIHRyaW13cygpKQ0KICAgIA0KICAgICMgZXh0cmFjdCB0aGUgd2Vic2l0ZQ0KICAgIHdlYnNpdGUgPSBjKHdlYnNpdGUsDQogICAgICAgICAgICAgICAgcnZlc3Q6Omh0bWxfZWxlbWVudChyb3csICJ0ZDpudGgtY2hpbGQoMykgYSIpIHw+DQogICAgICAgICAgICAgICAgICBydmVzdDo6aHRtbF9hdHRyKCJocmVmIikpDQogIH0NCiAgDQogICMgY29tYmluZSBpbnRvIHRoZSBkYXRhIGZyYW1lDQogIGRmID0gZGF0YS5mcmFtZSgNCiAgICBkZXBhcnRtZW50ID0gZGVwYXJ0bWVudCwNCiAgICBuYW1lID0gbmFtZSwNCiAgICBwb3NpdGlvbiA9IHBvc2l0aW9uLA0KICAgIHdlYnNpdGUgPSB3ZWJzaXRlDQogICkNCiAgDQogICMga2VlcCBvbmx5IHJvd3MgYmVsb25naW5nIHRvIHRoZSBjdXJyZW50IGRlcGFydG1lbnQNCiAgIyBzb21lIGRlcGFydG1lbnQgcGFnZXMgY29udGFpbiBlbnRyaWVzIGZyb20gb3RoZXIgZGVwYXJ0bWVudHMNCiAgZGYgPSBkZltkZiRkZXBhcnRtZW50ID09IGRlcGFydG1lbnRfbmFtZSwgXQ0KICANCiAgIyBhZGQgdGhpcyBkZXBhcnRtZW50J3MgZGF0YSB0byB0aGUgb3ZlcmFsbCBkYXRhIGZyYW1lDQogIGNvdXJzZXNfZGYgPSByYmluZChjb3Vyc2VzX2RmLCBkZikNCn0NCg0KaGVhZChjb3Vyc2VzX2RmKQ0KYGBgDQo=</div>
 
 
 </div>
