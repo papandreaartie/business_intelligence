@@ -156,7 +156,7 @@ demand = reviews |>
   ) |> # total the reviews per city and month
   dplyr::group_by(city, month) |> 
   dplyr::summarise(
-    total_reviews = dplyr::n(),
+    total_reviews = sum(reviews),
     .groups = "drop"
   )
 

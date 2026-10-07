@@ -36,45 +36,10 @@ for (dept_name in dept) {
   webpage = rvest::read_html(dept_url)
   
   # find all table rows on the webpage
-  rows = rvest::html_elements(webpage, "tr")
-  
-  # get the department name from the first faculty row
-  department_name = rvest::html_element(rows[2], "td:nth-child(1)") |>
-    rvest::html_text2() |>
-    trimws()
-  
-  # create empty lists
-  department = c()
-  name = c()
-  position = c()
-  website = c()
-  
-  # loop through the faculty rows skipping the header
-  for (row in rows[2:length(rows)]) {
-    
-    # extract the department
-    department = c(department,
-                   rvest::html_element(row, "td:nth-child(1)") |>
-                     rvest::html_text2() |>
-                     trimws())
-    
-    # extract the name
-    name = c(name,
-             rvest::html_element(row, "td:nth-child(3) strong a") |>
-               rvest::html_text() |>
-               trimws())
-    
-    # extract the position
-    position = c(position,
-                 rvest::html_element(row, "td:nth-child(3) i") |>
-                   rvest::html_text2() |>
-                   trimws())
-    
-    # extract the website
-    website = c(website,
-                rvest::html_element(row, "td:nth-child(3) a") |>
-                  rvest::html_attr("href"))
-  }
+  department = webpage |> rvest::html_elements("tr > td:nth-child(1)") |> rvest::html_text2()
+  name =  webpage |> rvest::html_elements("tr > td:nth-child(3) > strong > a") |> rvest::html_text2()
+  position = webpage |> rvest::html_elements("tr > td:nth-child(3) > i") |> rvest::html_text2() 
+  website = webpage |> rvest::html_elements("tr > td:nth-child(3) > strong > a") |> rvest::html_attr("href")
   
   # combine into the data frame
   df = data.frame(
@@ -84,9 +49,16 @@ for (dept_name in dept) {
     website = website
   )
   
+  df = df |> dplyr::filter(
+    department %in% c(
+      "Accountancy", "Economics", "Entrepreneurship",  "Finance",                         
+      "Information Systems & Analytics"  , "Management", "Marketing"                         
+    )
+  )
+  
   # keep only rows belonging to the current department
   # some department pages contain entries from other departments
-  df = df[df$department == department_name, ]
+  # df = df[df$department == department_name, ]
   
   # add this department's data to the overall data frame
   courses_df = rbind(courses_df, df)
