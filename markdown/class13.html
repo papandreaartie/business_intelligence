@@ -11,9 +11,9 @@
 
 <meta name="author" content="Artie Papandrea" />
 
-<meta name="date" content="2026-10-05" />
+<meta name="date" content="2026-10-07" />
 
-<title>Class 12</title>
+<title>Class 13</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -1587,138 +1587,86 @@ border-radius: 0px;
 
 
 
-<h1 class="title toc-ignore">Class 12</h1>
+<h1 class="title toc-ignore">Class 13</h1>
 <h4 class="author">Artie Papandrea</h4>
-<h4 class="date">2026-10-05</h4>
+<h4 class="date">2026-10-07</h4>
 
 </div>
 
 
-<div id="plane-crash-example" class="section level2" number="0.1">
-<h2><span class="header-section-number">0.1</span> plane crash
-example</h2>
+<div id="tidying-and-having-technically-correct-data-from-the-planecrash-info-site" class="section level2" number="1">
+<h2><span class="header-section-number">1</span> Tidying and having
+technically correct data from the planecrash info site</h2>
 <pre class="r"><code>year = 2025
 
 crash_url = paste0(&#39;https://www.planecrashinfo.com/&#39;, year, &#39;/&#39;, year, &#39;.htm&#39;)
 
+# the encoding came from class11
 crash_page &lt;- rvest::read_html(crash_url, encoding = &quot;ISO-8859-1&quot;)
 
-# This should now print without the error
-crash_page</code></pre>
-<pre><code>## {html_document}
-## &lt;html&gt;
-## [1] &lt;head&gt;\n&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8 ...
-## [2] &lt;body&gt;\n&lt;p align=&quot;center&quot;&gt;&lt;b&gt;&lt;font face=&quot;Arial&quot; color=&quot;#B0B6FF&quot; size=&quot;5&quot;&gt; ...</code></pre>
-<pre class="r"><code># How many &lt;table&gt; elements are on the page?
-crash_tables &lt;- crash_page |&gt;
-  rvest::html_elements(&quot;table&quot;) |&gt;
-  rvest::html_table()
+crash_page |&gt; 
+  # selector from inspector
+  #note the output (we also dropped the nth-child(8) in tr since we want all rows)
+  rvest::html_elements(&quot;tr &gt; td:nth-child(1) &gt; font&quot;) |&gt; 
+  rvest::html_text2() -&gt; date_col
 
-crash_df = crash_tables[[1]]
+crash_page |&gt; 
+  # repeat for location operator
+  rvest::html_elements(&quot;tr &gt; td:nth-child(2) &gt; font&quot;) |&gt; 
+  rvest::html_text2() -&gt; location_operator
 
-# from a cleaning perspective, there are several things that can be changed:
-# [1] replace the colnames with the first row
-# [2] have better column types (e.g., date being a date instead of chr)
-# [3] there are possible things you can do to clean the data within columns; e.g., split columns that contain multiple pieces of info
-# Column 4 has: fatalities/# of passengers
+crash_page |&gt; 
+  # repeat for aircraft_reg
+  rvest::html_elements(&quot;tr &gt; td:nth-child(3) &gt; font&quot;) |&gt; 
+  rvest::html_text2() -&gt; aircraft_reg
 
-# subsetting the dataframe
-# for todays class, we will focus on the first 2
-colnames(crash_df) = crash_df[1, ]
-# then delete the first row
-crash_df = crash_df[-1, ]
+crash_page |&gt; 
+  # repeat for fatalities
+  rvest::html_elements(&quot;tr &gt; td:nth-child(4) &gt; font&quot;) |&gt; 
+  rvest::html_text2() -&gt; fatalities
 
-crash_df = crash_df |&gt; 
-  # converts date into a date object
-  dplyr::mutate(Date = lubridate::dmy(Date))
-
-head(crash_df)</code></pre>
-<pre><code>## # A tibble: 6 × 4
-##   Date       `Location / Operator`             Aircraft Type / Regi…¹ Fatalities
-##   &lt;date&gt;     &lt;chr&gt;                             &lt;chr&gt;                  &lt;chr&gt;     
-## 1 2025-01-07 Off Rottnest Island, WA, Austral… Cessna 208 Caravan 67… 3/7(0)    
-## 2 2025-01-29 Washington DCAmerican Eagle / US… Canadair CRJ-701ER /U… 67/67(0)  
-## 3 2025-01-29 GPOC Unity Airstrip, South Sudan… Beechcraft 1900D5X-RHB 20/21(0)  
-## 4 2025-01-31 Philadelphia, PennsylvaniaMed Je… Learjet 55XA-UCI       6/6(1)    
-## 5 2025-02-06 Norton SoundBering Air            Cessna 208B Grand Car… 10/10(0)  
-## 6 2025-02-17 Toronto, CanadaDelta Connection,… Bombardier CRJ-900LRN… 0/80(0)   
-## # ℹ abbreviated name: ¹​`Aircraft Type / Registration`</code></pre>
-<p>#```{r} page = rvest::read_html(“<a href="https://isa401-salvage.vercel.app/registry?start=1" class="uri">https://isa401-salvage.vercel.app/registry?start=1</a>”)
-classes = page |&gt; rvest::html_elements(“.Dreadnought”) |&gt;
-rvest::html_text2() length(classes) # check this first: one per card</p>
-</div>
-<div id="from-clicking-on-the-site-we-saw-that-our-page-contains-50" class="section level1" number="1">
-<h1><span class="header-section-number">1</span> from clicking on the
-site, we saw that our page contains 50</h1>
-<p>base = “<a href="https://isa401-salvage.vercel.app" class="uri">https://isa401-salvage.vercel.app</a>” starts = seq(from =
-1, to = 351, by = 50) pages = vector(“list”, length(starts)) for (i in
-seq_along(starts)) { pg = rvest::read_html(paste0(base,
-“/registry?start=”, starts[i])) pages[[i]] = data.frame( class = pg
-|&gt; rvest::html_elements(“div &gt; ul &gt; li:nth-child(1) &gt; span”)
-|&gt; rvest::html_text2(), value = pg |&gt; rvest::html_elements(“div
-&gt; ul &gt; li:nth-child(3) &gt; span”) |&gt; rvest::html_text2()|&gt;
-stringr::str_remove(” MCr”) ) Sys.sleep(1) # robots.txt asks for it }
-registry = dplyr::bind_rows(pages) # 400 rows?</p>
-<p>registry |&gt; dplyr::filter(class == “Dreadnought”) |&gt;
-dplyr::mutate(value = as.numeric(value))-&gt; Dreadnoughts_df</p>
-<p>sum(Dreadnaughts_df$value) #```</p>
-<div id="structured-text-extraction" class="section level2" number="1.1">
-<h2><span class="header-section-number">1.1</span> Structured text
-extraction</h2>
-<div id="course-information" class="section level3" number="1.1.1">
-<h3><span class="header-section-number">1.1.1</span> Course
-Information</h3>
-<pre class="r"><code>chat = ellmer::chat_openai(
-  model = &quot;gpt-5.6-luna&quot;, # our api key only works with 5.6 luna
-  params = ellmer::params(reasoning_effort = &quot;none&quot;)
+# note that the number of elements in the four vectors are not equal
+df = data.frame(
+  date_col = date_col,
+  # -1 drops the first row that had col header
+  location_operator = location_operator[-1],
+  aircraft_reg = aircraft_reg[-1],
+  fatalities = fatalities[-1]
 )
 
-isa125_text = rvest::read_html(&quot;https://bulletin.miamioh.edu/courses-instruction/isa/&quot;) |&gt; 
-  # for this example, only the first course
-  rvest::html_element(&quot;#sc_sccoursedescs &gt; div:nth-child(1)&quot;) |&gt;  rvest::html_text2()
+# make this tidy
 
-course_info = chat$chat_structured(
-  isa125_text,
-  type = ellmer::type_object(
-    name = ellmer::type_string(
-      description = &quot;Name of the course. For example, ISA 235. Information Technology and the Intelligent Enterprise. Do not include the parentehsis for the credit hour and do not end with a period&quot;
-    ),
-    credit_hours = ellmer::type_integer(description = &quot;Return the credit hours that are listted next to the course number and title in parentheses in your response&quot;),
-    description = ellmer::type_string(description = &quot;The description of the course without the prereqs.&quot;),
-    prereqs = ellmer::type_string(&quot;List the information after the prerequisite:&quot;)
-  )
-)</code></pre>
-</div>
-</div>
-<div id="all-50-courses" class="section level2" number="1.2">
-<h2><span class="header-section-number">1.2</span> All 50 courses</h2>
-<pre class="r"><code>chat = ellmer::chat_openai(
-  model = &quot;gpt-5.6-luna&quot;, # our api key only works with 5.6 luna
-  params = ellmer::params(reasoning_effort = &quot;none&quot;)
-)
-
-course_list = rvest::read_html(&quot;https://bulletin.miamioh.edu/courses-instruction/isa/&quot;) |&gt; 
-  rvest::html_element(&quot;div.courseblock&quot;) |&gt;
-  rvest::html_text2() |&gt; # returns a character vector
-  as.list() # so as.list() converts a list to match the example in https://ellmer.tidyverse.org/articles/structured-data.html
-
- type_course = ellmer::type_object(
-    name = ellmer::type_string(
-      description = &quot;Name of the course. For example, ISA 235. Information Technology and the Intelligent Enterprise. Do not include the parentehsis for the credit hour and do not end with a period&quot;
-    ),
-    credit_hours = ellmer::type_integer(description = &quot;Return the credit hours that are listted next to the course number and title in parentheses in your response&quot;),
-    # renamed description to make it easier to understand
-    desc = ellmer::type_string(description = &quot;The description of the course without the prereqs.&quot;),
-    prereqs = ellmer::type_string(&quot;List the information after the prerequisite:&quot;)
+df |&gt; 
+  tidyr::separate(col = location_operator, into = c(&quot;location&quot;, &quot;operator&quot;, sep = &quot;\n&quot;)) |&gt; 
+  tidyr::separate(col = aircraft_reg, into = c(&quot;aircraft&quot;, &quot;registeration&quot;), sep = &quot;\n&quot;) |&gt; 
+  tidyr::separate(col = fatalities, into = c(&quot;air_fatalities&quot;, &quot;num_pass&quot;, &quot;ground_fatalities&quot;)) -&gt; tidy_df</code></pre>
+<pre><code>## Warning: Expected 3 pieces. Additional pieces discarded in 14 rows [1, 2, 3, 4, 5, 6, 7,
+## 8, 9, 10, 11, 12, 13, 14].
+## Expected 3 pieces. Additional pieces discarded in 14 rows [1, 2, 3, 4, 5, 6, 7,
+## 8, 9, 10, 11, 12, 13, 14].</code></pre>
+<pre class="r"><code>crash_clean = tidy_df |&gt;
+  dplyr::mutate(
+    date = lubridate::dmy(date_col),
+    dplyr::across(c(air_fatalities, num_pass, ground_fatalities),
+                  as.integer)
   )
 
- isa_df = ellmer::parallel_chat_structured(
-   chat = chat, prompts = course_list, type = type_course, include_tokens = T, include_cost = T
- )</code></pre>
-</div>
+dplyr::glimpse(crash_clean)</code></pre>
+<pre><code>## Rows: 14
+## Columns: 10
+## $ date_col          &lt;chr&gt; &quot;07 Jan 2025&quot;, &quot;29 Jan 2025&quot;, &quot;29 Jan 2025&quot;, &quot;31 Jan…
+## $ location          &lt;chr&gt; &quot;Off&quot;, &quot;Washington&quot;, &quot;GPOC&quot;, &quot;Philadelphia&quot;, &quot;Norton…
+## $ operator          &lt;chr&gt; &quot;Rottnest&quot;, &quot;DC&quot;, &quot;Unity&quot;, &quot;Pennsylvania&quot;, &quot;Sound&quot;, …
+## $ `\n`              &lt;chr&gt; &quot;Island&quot;, &quot;American&quot;, &quot;Airstrip&quot;, &quot;Med&quot;, &quot;Bering&quot;, &quot;…
+## $ aircraft          &lt;chr&gt; &quot;Cessna 208 Caravan 675&quot;, &quot;Canadair CRJ-701ER /UH-60…
+## $ registeration     &lt;chr&gt; &quot;VH-WTY &quot;, &quot;N709PS /?&quot;, &quot;5X-RHB &quot;, &quot;XA-UCI &quot;, &quot;N32BA…
+## $ air_fatalities    &lt;int&gt; 3, 67, 20, 6, 10, 0, 17, 12, 54, 241, 48, 0, 3, 20
+## $ num_pass          &lt;int&gt; 7, 67, 21, 6, 10, 80, 17, 17, 111, 242, 48, 4, 3, 20
+## $ ground_fatalities &lt;int&gt; 0, 0, 0, 1, 0, 0, 29, 0, 0, 19, 0, 2, 12, 0
+## $ date              &lt;date&gt; 2025-01-07, 2025-01-29, 2025-01-29, 2025-01-31, 2025…</code></pre>
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIkNsYXNzIDEyIg0KYXV0aG9yOiAiQXJ0aWUgUGFwYW5kcmVhIg0KZGF0ZTogIjIwMjYtMTAtMDUiDQpvdXRwdXQ6IA0KICBodG1sX2RvY3VtZW50Og0KICAgIHRvYzogVFJVRQ0KICAgIHRvY19mbG9hdDogVFJVRQ0KICAgIG51bWJlcl9zZWN0aW9uczogVFJVRQ0KICAgIGNvZGVfZm9sZGluZzogc2hvdw0KICAgIGNvZGVfZG93bmxvYWQ6IFRSVUUNCi0tLQ0KDQpgYGB7ciBzZXR1cCwgaW5jbHVkZT1GQUxTRX0NCmtuaXRyOjpvcHRzX2NodW5rJHNldChlY2hvID0gVFJVRSkNCmBgYA0KDQojIyBwbGFuZSBjcmFzaCBleGFtcGxlDQpgYGB7cn0NCnllYXIgPSAyMDI1DQoNCmNyYXNoX3VybCA9IHBhc3RlMCgnaHR0cHM6Ly93d3cucGxhbmVjcmFzaGluZm8uY29tLycsIHllYXIsICcvJywgeWVhciwgJy5odG0nKQ0KDQpjcmFzaF9wYWdlIDwtIHJ2ZXN0OjpyZWFkX2h0bWwoY3Jhc2hfdXJsLCBlbmNvZGluZyA9ICJJU08tODg1OS0xIikNCg0KIyBUaGlzIHNob3VsZCBub3cgcHJpbnQgd2l0aG91dCB0aGUgZXJyb3INCmNyYXNoX3BhZ2UNCmBgYA0KDQpgYGB7ciBjcmFzaGVzfQ0KIyBIb3cgbWFueSA8dGFibGU+IGVsZW1lbnRzIGFyZSBvbiB0aGUgcGFnZT8NCmNyYXNoX3RhYmxlcyA8LSBjcmFzaF9wYWdlIHw+DQogIHJ2ZXN0OjpodG1sX2VsZW1lbnRzKCJ0YWJsZSIpIHw+DQogIHJ2ZXN0OjpodG1sX3RhYmxlKCkNCg0KY3Jhc2hfZGYgPSBjcmFzaF90YWJsZXNbWzFdXQ0KDQojIGZyb20gYSBjbGVhbmluZyBwZXJzcGVjdGl2ZSwgdGhlcmUgYXJlIHNldmVyYWwgdGhpbmdzIHRoYXQgY2FuIGJlIGNoYW5nZWQ6DQojIFsxXSByZXBsYWNlIHRoZSBjb2xuYW1lcyB3aXRoIHRoZSBmaXJzdCByb3cNCiMgWzJdIGhhdmUgYmV0dGVyIGNvbHVtbiB0eXBlcyAoZS5nLiwgZGF0ZSBiZWluZyBhIGRhdGUgaW5zdGVhZCBvZiBjaHIpDQojIFszXSB0aGVyZSBhcmUgcG9zc2libGUgdGhpbmdzIHlvdSBjYW4gZG8gdG8gY2xlYW4gdGhlIGRhdGEgd2l0aGluIGNvbHVtbnM7IGUuZy4sIHNwbGl0IGNvbHVtbnMgdGhhdCBjb250YWluIG11bHRpcGxlIHBpZWNlcyBvZiBpbmZvDQojIENvbHVtbiA0IGhhczogZmF0YWxpdGllcy8jIG9mIHBhc3NlbmdlcnMNCg0KIyBzdWJzZXR0aW5nIHRoZSBkYXRhZnJhbWUNCiMgZm9yIHRvZGF5cyBjbGFzcywgd2Ugd2lsbCBmb2N1cyBvbiB0aGUgZmlyc3QgMg0KY29sbmFtZXMoY3Jhc2hfZGYpID0gY3Jhc2hfZGZbMSwgXQ0KIyB0aGVuIGRlbGV0ZSB0aGUgZmlyc3Qgcm93DQpjcmFzaF9kZiA9IGNyYXNoX2RmWy0xLCBdDQoNCmNyYXNoX2RmID0gY3Jhc2hfZGYgfD4gDQogICMgY29udmVydHMgZGF0ZSBpbnRvIGEgZGF0ZSBvYmplY3QNCiAgZHBseXI6Om11dGF0ZShEYXRlID0gbHVicmlkYXRlOjpkbXkoRGF0ZSkpDQoNCmhlYWQoY3Jhc2hfZGYpDQoNCmBgYA0KDQojYGBge3J9DQpwYWdlID0gcnZlc3Q6OnJlYWRfaHRtbCgiaHR0cHM6Ly9pc2E0MDEtc2FsdmFnZS52ZXJjZWwuYXBwL3JlZ2lzdHJ5P3N0YXJ0PTEiKQ0KY2xhc3NlcyA9IHBhZ2UgfD4NCiAgcnZlc3Q6Omh0bWxfZWxlbWVudHMoIi5EcmVhZG5vdWdodCIpIHw+DQogIHJ2ZXN0OjpodG1sX3RleHQyKCkNCmxlbmd0aChjbGFzc2VzKSAgICMgY2hlY2sgdGhpcyBmaXJzdDogb25lIHBlciBjYXJkDQoNCiMgZnJvbSBjbGlja2luZyBvbiB0aGUgc2l0ZSwgd2Ugc2F3IHRoYXQgb3VyIHBhZ2UgY29udGFpbnMgNTANCmJhc2UgPSAiaHR0cHM6Ly9pc2E0MDEtc2FsdmFnZS52ZXJjZWwuYXBwIg0Kc3RhcnRzID0gc2VxKGZyb20gPSAxLCB0byA9IDM1MSwgYnkgPSA1MCkNCnBhZ2VzID0gdmVjdG9yKCJsaXN0IiwgbGVuZ3RoKHN0YXJ0cykpDQpmb3IgKGkgaW4gc2VxX2Fsb25nKHN0YXJ0cykpIHsNCiAgcGcgPSBydmVzdDo6cmVhZF9odG1sKHBhc3RlMChiYXNlLCAiL3JlZ2lzdHJ5P3N0YXJ0PSIsIHN0YXJ0c1tpXSkpDQogIHBhZ2VzW1tpXV0gPSBkYXRhLmZyYW1lKA0KICAgIGNsYXNzID0gcGcgfD4gcnZlc3Q6Omh0bWxfZWxlbWVudHMoImRpdiA+IHVsID4gbGk6bnRoLWNoaWxkKDEpID4gc3BhbiIpIHw+IA0KICAgICAgcnZlc3Q6Omh0bWxfdGV4dDIoKSwNCiAgICB2YWx1ZSA9IHBnIHw+IHJ2ZXN0OjpodG1sX2VsZW1lbnRzKCJkaXYgPiB1bCA+IGxpOm50aC1jaGlsZCgzKSA+IHNwYW4iKSB8PiANCiAgICAgIHJ2ZXN0OjpodG1sX3RleHQyKCl8PiBzdHJpbmdyOjpzdHJfcmVtb3ZlKCIgTUNyIikNCiAgKQ0KICBTeXMuc2xlZXAoMSkgICAjIHJvYm90cy50eHQgYXNrcyBmb3IgaXQNCn0NCnJlZ2lzdHJ5ID0gZHBseXI6OmJpbmRfcm93cyhwYWdlcykgICAjIDQwMCByb3dzPw0KDQpyZWdpc3RyeSB8PiBkcGx5cjo6ZmlsdGVyKGNsYXNzID09ICJEcmVhZG5vdWdodCIpIHw+IA0KICBkcGx5cjo6bXV0YXRlKHZhbHVlID0gYXMubnVtZXJpYyh2YWx1ZSkpLT4gRHJlYWRub3VnaHRzX2RmDQoNCnN1bShEcmVhZG5hdWdodHNfZGYkdmFsdWUpDQojYGBgDQoNCiMjIFN0cnVjdHVyZWQgdGV4dCBleHRyYWN0aW9uDQojIyMgQ291cnNlIEluZm9ybWF0aW9uDQpgYGB7ciBjb3Vyc2VzfQ0KY2hhdCA9IGVsbG1lcjo6Y2hhdF9vcGVuYWkoDQogIG1vZGVsID0gImdwdC01LjYtbHVuYSIsICMgb3VyIGFwaSBrZXkgb25seSB3b3JrcyB3aXRoIDUuNiBsdW5hDQogIHBhcmFtcyA9IGVsbG1lcjo6cGFyYW1zKHJlYXNvbmluZ19lZmZvcnQgPSAibm9uZSIpDQopDQoNCmlzYTEyNV90ZXh0ID0gcnZlc3Q6OnJlYWRfaHRtbCgiaHR0cHM6Ly9idWxsZXRpbi5taWFtaW9oLmVkdS9jb3Vyc2VzLWluc3RydWN0aW9uL2lzYS8iKSB8PiANCiAgIyBmb3IgdGhpcyBleGFtcGxlLCBvbmx5IHRoZSBmaXJzdCBjb3Vyc2UNCiAgcnZlc3Q6Omh0bWxfZWxlbWVudCgiI3NjX3NjY291cnNlZGVzY3MgPiBkaXY6bnRoLWNoaWxkKDEpIikgfD4gIHJ2ZXN0OjpodG1sX3RleHQyKCkNCg0KY291cnNlX2luZm8gPSBjaGF0JGNoYXRfc3RydWN0dXJlZCgNCiAgaXNhMTI1X3RleHQsDQogIHR5cGUgPSBlbGxtZXI6OnR5cGVfb2JqZWN0KA0KICAgIG5hbWUgPSBlbGxtZXI6OnR5cGVfc3RyaW5nKA0KICAgICAgZGVzY3JpcHRpb24gPSAiTmFtZSBvZiB0aGUgY291cnNlLiBGb3IgZXhhbXBsZSwgSVNBIDIzNS4gSW5mb3JtYXRpb24gVGVjaG5vbG9neSBhbmQgdGhlIEludGVsbGlnZW50IEVudGVycHJpc2UuIERvIG5vdCBpbmNsdWRlIHRoZSBwYXJlbnRlaHNpcyBmb3IgdGhlIGNyZWRpdCBob3VyIGFuZCBkbyBub3QgZW5kIHdpdGggYSBwZXJpb2QiDQogICAgKSwNCiAgICBjcmVkaXRfaG91cnMgPSBlbGxtZXI6OnR5cGVfaW50ZWdlcihkZXNjcmlwdGlvbiA9ICJSZXR1cm4gdGhlIGNyZWRpdCBob3VycyB0aGF0IGFyZSBsaXN0dGVkIG5leHQgdG8gdGhlIGNvdXJzZSBudW1iZXIgYW5kIHRpdGxlIGluIHBhcmVudGhlc2VzIGluIHlvdXIgcmVzcG9uc2UiKSwNCiAgICBkZXNjcmlwdGlvbiA9IGVsbG1lcjo6dHlwZV9zdHJpbmcoZGVzY3JpcHRpb24gPSAiVGhlIGRlc2NyaXB0aW9uIG9mIHRoZSBjb3Vyc2Ugd2l0aG91dCB0aGUgcHJlcmVxcy4iKSwNCiAgICBwcmVyZXFzID0gZWxsbWVyOjp0eXBlX3N0cmluZygiTGlzdCB0aGUgaW5mb3JtYXRpb24gYWZ0ZXIgdGhlIHByZXJlcXVpc2l0ZToiKQ0KICApDQopDQpgYGANCg0KIyMgQWxsIDUwIGNvdXJzZXMNCmBgYHtyfQ0KY2hhdCA9IGVsbG1lcjo6Y2hhdF9vcGVuYWkoDQogIG1vZGVsID0gImdwdC01LjYtbHVuYSIsICMgb3VyIGFwaSBrZXkgb25seSB3b3JrcyB3aXRoIDUuNiBsdW5hDQogIHBhcmFtcyA9IGVsbG1lcjo6cGFyYW1zKHJlYXNvbmluZ19lZmZvcnQgPSAibm9uZSIpDQopDQoNCmNvdXJzZV9saXN0ID0gcnZlc3Q6OnJlYWRfaHRtbCgiaHR0cHM6Ly9idWxsZXRpbi5taWFtaW9oLmVkdS9jb3Vyc2VzLWluc3RydWN0aW9uL2lzYS8iKSB8PiANCiAgcnZlc3Q6Omh0bWxfZWxlbWVudCgiZGl2LmNvdXJzZWJsb2NrIikgfD4NCiAgcnZlc3Q6Omh0bWxfdGV4dDIoKSB8PiAjIHJldHVybnMgYSBjaGFyYWN0ZXIgdmVjdG9yDQogIGFzLmxpc3QoKSAjIHNvIGFzLmxpc3QoKSBjb252ZXJ0cyBhIGxpc3QgdG8gbWF0Y2ggdGhlIGV4YW1wbGUgaW4gaHR0cHM6Ly9lbGxtZXIudGlkeXZlcnNlLm9yZy9hcnRpY2xlcy9zdHJ1Y3R1cmVkLWRhdGEuaHRtbA0KDQogdHlwZV9jb3Vyc2UgPSBlbGxtZXI6OnR5cGVfb2JqZWN0KA0KICAgIG5hbWUgPSBlbGxtZXI6OnR5cGVfc3RyaW5nKA0KICAgICAgZGVzY3JpcHRpb24gPSAiTmFtZSBvZiB0aGUgY291cnNlLiBGb3IgZXhhbXBsZSwgSVNBIDIzNS4gSW5mb3JtYXRpb24gVGVjaG5vbG9neSBhbmQgdGhlIEludGVsbGlnZW50IEVudGVycHJpc2UuIERvIG5vdCBpbmNsdWRlIHRoZSBwYXJlbnRlaHNpcyBmb3IgdGhlIGNyZWRpdCBob3VyIGFuZCBkbyBub3QgZW5kIHdpdGggYSBwZXJpb2QiDQogICAgKSwNCiAgICBjcmVkaXRfaG91cnMgPSBlbGxtZXI6OnR5cGVfaW50ZWdlcihkZXNjcmlwdGlvbiA9ICJSZXR1cm4gdGhlIGNyZWRpdCBob3VycyB0aGF0IGFyZSBsaXN0dGVkIG5leHQgdG8gdGhlIGNvdXJzZSBudW1iZXIgYW5kIHRpdGxlIGluIHBhcmVudGhlc2VzIGluIHlvdXIgcmVzcG9uc2UiKSwNCiAgICAjIHJlbmFtZWQgZGVzY3JpcHRpb24gdG8gbWFrZSBpdCBlYXNpZXIgdG8gdW5kZXJzdGFuZA0KICAgIGRlc2MgPSBlbGxtZXI6OnR5cGVfc3RyaW5nKGRlc2NyaXB0aW9uID0gIlRoZSBkZXNjcmlwdGlvbiBvZiB0aGUgY291cnNlIHdpdGhvdXQgdGhlIHByZXJlcXMuIiksDQogICAgcHJlcmVxcyA9IGVsbG1lcjo6dHlwZV9zdHJpbmcoIkxpc3QgdGhlIGluZm9ybWF0aW9uIGFmdGVyIHRoZSBwcmVyZXF1aXNpdGU6IikNCiAgKQ0KDQogaXNhX2RmID0gZWxsbWVyOjpwYXJhbGxlbF9jaGF0X3N0cnVjdHVyZWQoDQogICBjaGF0ID0gY2hhdCwgcHJvbXB0cyA9IGNvdXJzZV9saXN0LCB0eXBlID0gdHlwZV9jb3Vyc2UsIGluY2x1ZGVfdG9rZW5zID0gVCwgaW5jbHVkZV9jb3N0ID0gVA0KICkNCg0KYGBgDQoNCg0KYGBge3J9DQoNCmBgYA0KDQo=</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIkNsYXNzIDEzIg0KYXV0aG9yOiAiQXJ0aWUgUGFwYW5kcmVhIg0KZGF0ZTogIjIwMjYtMTAtMDciDQpvdXRwdXQ6IA0KICBodG1sX2RvY3VtZW50Og0KICAgIHRvYzogVFJVRQ0KICAgIHRvY19mbG9hdDogVFJVRQ0KICAgIG51bWJlcl9zZWN0aW9uczogVFJVRQ0KICAgIGNvZGVfZm9sZGluZzogc2hvdw0KICAgIGNvZGVfZG93bmxvYWQ6IFRSVUUNCi0tLQ0KDQpgYGB7ciBzZXR1cCwgaW5jbHVkZT1GQUxTRX0NCmtuaXRyOjpvcHRzX2NodW5rJHNldChlY2hvID0gVFJVRSkNCmBgYA0KDQojIyBUaWR5aW5nIGFuZCBoYXZpbmcgdGVjaG5pY2FsbHkgY29ycmVjdCBkYXRhIGZyb20gdGhlIHBsYW5lY3Jhc2ggaW5mbyBzaXRlDQpgYGB7cn0NCnllYXIgPSAyMDI1DQoNCmNyYXNoX3VybCA9IHBhc3RlMCgnaHR0cHM6Ly93d3cucGxhbmVjcmFzaGluZm8uY29tLycsIHllYXIsICcvJywgeWVhciwgJy5odG0nKQ0KDQojIHRoZSBlbmNvZGluZyBjYW1lIGZyb20gY2xhc3MxMQ0KY3Jhc2hfcGFnZSA8LSBydmVzdDo6cmVhZF9odG1sKGNyYXNoX3VybCwgZW5jb2RpbmcgPSAiSVNPLTg4NTktMSIpDQoNCmNyYXNoX3BhZ2UgfD4gDQogICMgc2VsZWN0b3IgZnJvbSBpbnNwZWN0b3INCiAgI25vdGUgdGhlIG91dHB1dCAod2UgYWxzbyBkcm9wcGVkIHRoZSBudGgtY2hpbGQoOCkgaW4gdHIgc2luY2Ugd2Ugd2FudCBhbGwgcm93cykNCiAgcnZlc3Q6Omh0bWxfZWxlbWVudHMoInRyID4gdGQ6bnRoLWNoaWxkKDEpID4gZm9udCIpIHw+IA0KICBydmVzdDo6aHRtbF90ZXh0MigpIC0+IGRhdGVfY29sDQoNCmNyYXNoX3BhZ2UgfD4gDQogICMgcmVwZWF0IGZvciBsb2NhdGlvbiBvcGVyYXRvcg0KICBydmVzdDo6aHRtbF9lbGVtZW50cygidHIgPiB0ZDpudGgtY2hpbGQoMikgPiBmb250IikgfD4gDQogIHJ2ZXN0OjpodG1sX3RleHQyKCkgLT4gbG9jYXRpb25fb3BlcmF0b3INCg0KY3Jhc2hfcGFnZSB8PiANCiAgIyByZXBlYXQgZm9yIGFpcmNyYWZ0X3JlZw0KICBydmVzdDo6aHRtbF9lbGVtZW50cygidHIgPiB0ZDpudGgtY2hpbGQoMykgPiBmb250IikgfD4gDQogIHJ2ZXN0OjpodG1sX3RleHQyKCkgLT4gYWlyY3JhZnRfcmVnDQoNCmNyYXNoX3BhZ2UgfD4gDQogICMgcmVwZWF0IGZvciBmYXRhbGl0aWVzDQogIHJ2ZXN0OjpodG1sX2VsZW1lbnRzKCJ0ciA+IHRkOm50aC1jaGlsZCg0KSA+IGZvbnQiKSB8PiANCiAgcnZlc3Q6Omh0bWxfdGV4dDIoKSAtPiBmYXRhbGl0aWVzDQoNCiMgbm90ZSB0aGF0IHRoZSBudW1iZXIgb2YgZWxlbWVudHMgaW4gdGhlIGZvdXIgdmVjdG9ycyBhcmUgbm90IGVxdWFsDQpkZiA9IGRhdGEuZnJhbWUoDQogIGRhdGVfY29sID0gZGF0ZV9jb2wsDQogICMgLTEgZHJvcHMgdGhlIGZpcnN0IHJvdyB0aGF0IGhhZCBjb2wgaGVhZGVyDQogIGxvY2F0aW9uX29wZXJhdG9yID0gbG9jYXRpb25fb3BlcmF0b3JbLTFdLA0KICBhaXJjcmFmdF9yZWcgPSBhaXJjcmFmdF9yZWdbLTFdLA0KICBmYXRhbGl0aWVzID0gZmF0YWxpdGllc1stMV0NCikNCg0KIyBtYWtlIHRoaXMgdGlkeQ0KDQpkZiB8PiANCiAgdGlkeXI6OnNlcGFyYXRlKGNvbCA9IGxvY2F0aW9uX29wZXJhdG9yLCBpbnRvID0gYygibG9jYXRpb24iLCAib3BlcmF0b3IiLCBzZXAgPSAiXG4iKSkgfD4gDQogIHRpZHlyOjpzZXBhcmF0ZShjb2wgPSBhaXJjcmFmdF9yZWcsIGludG8gPSBjKCJhaXJjcmFmdCIsICJyZWdpc3RlcmF0aW9uIiksIHNlcCA9ICJcbiIpIHw+IA0KICB0aWR5cjo6c2VwYXJhdGUoY29sID0gZmF0YWxpdGllcywgaW50byA9IGMoImFpcl9mYXRhbGl0aWVzIiwgIm51bV9wYXNzIiwgImdyb3VuZF9mYXRhbGl0aWVzIikpIC0+IHRpZHlfZGYNCg0KY3Jhc2hfY2xlYW4gPSB0aWR5X2RmIHw+DQogIGRwbHlyOjptdXRhdGUoDQogICAgZGF0ZSA9IGx1YnJpZGF0ZTo6ZG15KGRhdGVfY29sKSwNCiAgICBkcGx5cjo6YWNyb3NzKGMoYWlyX2ZhdGFsaXRpZXMsIG51bV9wYXNzLCBncm91bmRfZmF0YWxpdGllcyksDQogICAgICAgICAgICAgICAgICBhcy5pbnRlZ2VyKQ0KICApDQoNCmRwbHlyOjpnbGltcHNlKGNyYXNoX2NsZWFuKQ0KDQpgYGANCg0K</div>
 
 
 </div>
@@ -1756,7 +1704,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
-  window.initializeSourceEmbed("class12.Rmd");
+  window.initializeSourceEmbed("class13.Rmd");
   window.initializeCodeFolding("show" === "show");
 });
 </script>

@@ -88,7 +88,7 @@ sum(Dreadnaughts_df$value)
 ### Course Information
 ```{r courses}
 chat = ellmer::chat_openai(
-  model = "gpt-5.6-luna",
+  model = "gpt-5.6-luna", # our api key only works with 5.6 luna
   params = ellmer::params(reasoning_effort = "none")
 )
 
@@ -96,15 +96,49 @@ isa125_text = rvest::read_html("https://bulletin.miamioh.edu/courses-instruction
   # for this example, only the first course
   rvest::html_element("#sc_sccoursedescs > div:nth-child(1)") |>  rvest::html_text2()
 
-chat$chat_structured(
+course_info = chat$chat_structured(
   isa125_text,
   type = ellmer::type_object(
     name = ellmer::type_string(
       description = "Name of the course. For example, ISA 235. Information Technology and the Intelligent Enterprise. Do not include the parentehsis for the credit hour and do not end with a period"
     ),
-    description = ellmer::type_string(description = "The description of the course without the prereqs.") 
+    credit_hours = ellmer::type_integer(description = "Return the credit hours that are listted next to the course number and title in parentheses in your response"),
+    description = ellmer::type_string(description = "The description of the course without the prereqs."),
+    prereqs = ellmer::type_string("List the information after the prerequisite:")
   )
 )
 ```
 
+## All 50 courses
+```{r}
+chat = ellmer::chat_openai(
+  model = "gpt-5.6-luna", # our api key only works with 5.6 luna
+  params = ellmer::params(reasoning_effort = "none")
+)
+
+course_list = rvest::read_html("https://bulletin.miamioh.edu/courses-instruction/isa/") |> 
+  rvest::html_element("div.courseblock") |>
+  rvest::html_text2() |> # returns a character vector
+  as.list() # so as.list() converts a list to match the example in https://ellmer.tidyverse.org/articles/structured-data.html
+
+ type_course = ellmer::type_object(
+    name = ellmer::type_string(
+      description = "Name of the course. For example, ISA 235. Information Technology and the Intelligent Enterprise. Do not include the parentehsis for the credit hour and do not end with a period"
+    ),
+    credit_hours = ellmer::type_integer(description = "Return the credit hours that are listted next to the course number and title in parentheses in your response"),
+    # renamed description to make it easier to understand
+    desc = ellmer::type_string(description = "The description of the course without the prereqs."),
+    prereqs = ellmer::type_string("List the information after the prerequisite:")
+  )
+
+ isa_df = ellmer::parallel_chat_structured(
+   chat = chat, prompts = course_list, type = type_course, include_tokens = T, include_cost = T
+ )
+
+```
+
+
+```{r}
+
+```
 
